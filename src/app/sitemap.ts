@@ -3,7 +3,8 @@ import { collections } from "@/content/site";
 import { site } from "@/lib/site";
 import { listProducts } from "@/lib/store";
 
-export const revalidate = 3600;
+// Rendered on request (the catalogue lives in the ERP, which a build cannot reach); the product fetches below are cached for an hour.
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

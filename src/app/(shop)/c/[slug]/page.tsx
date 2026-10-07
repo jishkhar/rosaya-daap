@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Listing } from "@/components/product/Listing";
-import { collections, getCollection } from "@/content/site";
+import { getCollection } from "@/content/site";
 import { NEW_ARRIVALS, scopeOf } from "@/lib/store";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
@@ -14,10 +14,6 @@ const resolve = (slug: string) => {
   const c = getCollection(slug);
   return c ? { ...c, scope: scopeOf(c) } : null;
 };
-
-export function generateStaticParams() {
-  return [...collections.map((c) => ({ slug: c.slug })), { slug: NEW.slug }];
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const c = resolve((await params).slug);
