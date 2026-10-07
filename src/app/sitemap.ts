@@ -1,0 +1,23 @@
+import type { MetadataRoute } from "next";
+import { collections } from "@/content/site";
+import { site } from "@/lib/site";
+import { listProducts } from "@/lib/store";
+
+export const revalidate = 3600;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const now = new Date();
+  const statics = ["", "/shop", "/c/new-arrivals", "/about", "/contact", "/help/shipping", "/help/returns", "/privacy", "/terms"].map((p) => ({ url: `${site.url}${p}`, lastModified: now }));
+  const cols = collections.map((c) => ({ url: `${site.url}/c/${c.slug}`, lastModified: now }));
+  const products: MetadataRoute.Sitemap = [];
+  try {
+    for (let offset = 0; offset < 5000; offset += 100) {
+      const page = await listProducts({ limit: 100, offset, revalidate: 3600 });
+      page.items.forEach((p) => products.push({ url: `${site.url}/p/${p.slug}`, lastModified: new Date(p.date) }));
+      if (offset + 100 >= page.total) break;
+    }
+  } catch {
+    // The catalogue being unreachable must not break the sitemap's static part.
+  }
+  return [...statics, ...cols, ...products];
+}

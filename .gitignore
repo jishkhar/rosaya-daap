@@ -1,0 +1,8 @@
+.next
+node_modules
+next-env.d.ts
+*.tsbuildinfo
+
+# local env (holds the channel key)
+.env*
+!.env.example
