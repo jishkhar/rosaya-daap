@@ -27,3 +27,5 @@ Catalogue, search, filters, facets, stock, serviceability, server-priced basket,
 - Shipping is free: the ERP order model has no delivery-fee line that the books/GST invoice understand.
 - Password-reset emails need `RESEND_API_KEY` + `EMAIL_FROM`; otherwise the link is written to the backend log.
 - Razorpay: set the tenant's credentials with `PUT /api/v1/tenant/payment-providers/razorpay`; the return URL is `STOREFRONT_URL` on the backend.
+
+Product detail pages include verified-order reviews with a five-star rating and written comment. Buyers can review immediately after placing an order; reviews also appear in ERP Feedback. See [Product reviews](../docs/PRODUCT_REVIEWS.md).

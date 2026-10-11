@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Gallery } from "@/components/product/Gallery";
 import { PurchasePanel } from "@/components/product/PurchasePanel";
+import { ProductReviews } from "@/components/product/ProductReviews";
 import { ProductRail } from "@/components/home/ProductRail";
 import { Section } from "@/components/home/Section";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
@@ -79,6 +80,8 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      <ProductReviews key={p.slug} slug={p.slug} />
 
       {more.length > 0 && (
         <Section eyebrow="Complete the look" title="You may also love">
