@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { addFirstProductToBag, fillAddress } from "./helpers";
+import { addFirstProductToBag, fillAddress, registerShopper } from "./helpers";
 
-test("browse, filter, add to bag, coupon, guest checkout with cash on delivery", async ({ page }) => {
+test("browse, filter, add to bag, coupon, register and check out with cash on delivery", async ({ page }) => {
   // landing page is built from the live catalogue
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "New Arrivals" })).toBeVisible();
@@ -30,10 +30,15 @@ test("browse, filter, add to bag, coupon, guest checkout with cash on delivery",
   await page.getByRole("button", { name: "Apply" }).click();
   await expect(page.getByText(/FREESHIP applied/)).toBeVisible();
 
-  // checkout as a guest
+  // Checkout requires an account and preserves the bag through registration.
   await page.getByRole("link", { name: /proceed to checkout/i }).click();
-  await fillAddress(page, { phone: "9876543210", email: "guest@example.com" });
-  await page.getByText("Cash on delivery").click();
+  await expect(page).toHaveURL(/\/login\?next=\/checkout$/);
+  await page.getByRole("link", { name: "Create an account" }).click();
+  await registerShopper(page);
+  await expect(page).toHaveURL(/\/checkout$/);
+  await fillAddress(page, { phone: "9876543210" });
+  await page.getByRole("button", { name: /^Pay ·/ }).click();
+  await page.getByRole("dialog", { name: "Choose payment method" }).getByText("Cash on delivery").click();
   await page.getByRole("button", { name: /place order/i }).click();
 
   await expect(page).toHaveURL(/\/order\/[0-9a-f-]+\/success/);
@@ -47,6 +52,9 @@ test("browse, filter, add to bag, coupon, guest checkout with cash on delivery",
 });
 
 test("a pincode we don't serve is refused before payment is offered", async ({ page }) => {
+  await page.goto("/register");
+  await registerShopper(page);
+  await expect(page).toHaveURL(/\/account$/);
   await addFirstProductToBag(page);
   await page.goto("/checkout");
   await page.getByLabel("Mobile number").fill("9876543210");

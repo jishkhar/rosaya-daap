@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { call } from "@/lib/http";
+import { useAuth } from "@/lib/auth";
 
 export type CartItem = {
   key: string;
@@ -21,6 +22,7 @@ export type QuoteLine = {
   unit_price_minor?: number; mrp_minor?: number | null; quantity: number; max_qty: number; available: boolean;
 };
 export type Quote = {
+  available_coupons: { code: string; name: string; label: string; amount_minor: number | null; min_order_minor: number; applicable: boolean; reason: string | null }[];
   lines: QuoteLine[];
   issues: { variant_id: string; kind: "unavailable" | "out_of_stock" | "reduced"; message: string; max_qty?: number }[];
   can_checkout: boolean;
@@ -75,6 +77,8 @@ const payloadOf = (items: CartItem[], code: string | null) => ({
 });
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { user, ready: authReady } = useAuth();
+  const customerId = user?.id ?? null;
   const [items, setItems] = useState<CartItem[]>([]);
   const [couponCode, setCouponCode] = useState<string | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -111,7 +115,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items]);
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !authReady) return;
     if (JSON.parse(sig).items.length === 0) {
       setQuote(null);
       setQuoting(false);
@@ -148,7 +152,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(t);
       ctrl.abort();
     };
-  }, [sig, ready]);
+  }, [sig, ready, authReady, customerId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const add: Ctx["add"] = useCallback((item, qty = 1) => {

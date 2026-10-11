@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { addFirstProductToBag, fillAddress, unique } from "./helpers";
+import { addFirstProductToBag, unique } from "./helpers";
 
 test("register, save an address, pay online, see the order, reorder, sign out and back in", async ({ page }) => {
   const email = `${unique("shopper")}@example.com`;
@@ -37,6 +37,7 @@ test("register, save an address, pay online, see the order, reorder, sign out an
   await page.getByRole("button", { name: /Home · 12 MG Road/ }).click();
   await page.getByRole("button", { name: /continue to payment/i }).click();
   await page.getByRole("button", { name: /^Pay · / }).click();
+  await page.getByRole("dialog", { name: "Choose payment method" }).getByRole("button", { name: /^Pay online ·/ }).click();
   await expect(page).toHaveURL(/\/pay\//);
   await page.getByRole("button", { name: /pay now \(test\)/i }).click();
   await expect(page).toHaveURL(/\/order\/[0-9a-f-]+\/success/);
