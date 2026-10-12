@@ -78,10 +78,9 @@ export default async function ProductPage({ params }: Props) {
               </details>
             ))}
           </div>
+          <ProductReviews key={p.slug} slug={p.slug} />
         </div>
       </div>
-
-      <ProductReviews key={p.slug} slug={p.slug} />
 
       {more.length > 0 && (
         <Section eyebrow="Complete the look" title="You may also love">

@@ -29,3 +29,11 @@ Catalogue, search, filters, facets, stock, serviceability, server-priced basket,
 - Razorpay: set the tenant's credentials with `PUT /api/v1/tenant/payment-providers/razorpay`; the return URL is `STOREFRONT_URL` on the backend.
 
 Product detail pages include verified-order reviews with a five-star rating and written comment. Buyers can review immediately after placing an order; reviews also appear in ERP Feedback. See [Product reviews](../docs/PRODUCT_REVIEWS.md).
+
+## Availability and production configuration
+
+Vercel needs `STORE_API_BASE` set to the deployed ERP's public HTTPS origin and a valid `STORE_CHANNEL_KEY` for the Online channel. A localhost address or the placeholders in `.env.vercel` cannot reach the ERP from Vercel. Set `SITE_URL` to the storefront's public origin and `MEDIA_BASE_URL` to the public image bucket origin. These variables must be configured on the production deployment; local environment files do not establish the deployed settings.
+
+Backend reads have a 10-second deadline, including response-body loading. Writes have a 30-second deadline and are never automatically retried. The homepage keeps its navigation and category links available when catalogue requests fail and offers a full-page retry; unavailable category counts are omitted rather than shown as zero. Other pages use the existing error boundary, and API callers receive a structured timeout error. Timeout logs include only the method and path, without credentials or query strings.
+
+Run `npm test` for backend timeout and response regression checks. When investigating a live loading problem, check Vercel function logs and the ERP's health and catalogue endpoints as well as the homepage: a streamed HTTP 200 alone does not prove the page finished rendering.

@@ -16,7 +16,9 @@ const peek = (slug: string, n: number) =>
   listProducts({ scope: scopeOf(getCollection(slug)!), searchParams: IN_STOCK, limit: 24, revalidate: 60 }).then((r) => distinct(r.items, n));
 
 export default async function Home() {
-  const [heroPicks, newest, cheapest, covers, counts, dupattas, kalamkari] = await Promise.all([
+  const settledValue = <T,>(result: PromiseSettledResult<T>, fallback: T): T => result.status === "fulfilled" ? result.value : fallback;
+  const emptyProducts = { items: [], total: 0, facets: { colors: [], crafts: [], min: 0, max: 0 } };
+  const results = await Promise.allSettled([
     Promise.all(heroSlides.map((s) => peek(s.collection, 3))),
     listProducts({ scope: NEW_ARRIVALS, searchParams: IN_STOCK, limit: 40, revalidate: 60 }),
     listProducts({ scope: { sort: "price-asc" }, searchParams: IN_STOCK, limit: 60, revalidate: 60 }),
@@ -25,17 +27,29 @@ export default async function Home() {
     peek("dupattas", 1),
     peek("kalamkari", 1),
   ]);
+  const unavailable = results.some((result) => result.status === "rejected");
+  const heroPicks = settledValue(results[0], heroSlides.map(() => []));
+  const newest = settledValue(results[1], emptyProducts);
+  const cheapest = settledValue(results[2], emptyProducts);
+  const covers = settledValue(results[3], {});
+  const counts = settledValue(results[4], {});
+  const dupattas = settledValue(results[5], []);
+  const kalamkari = settledValue(results[6], []);
   const heroImages = Object.fromEntries(heroSlides.map((s, i) => [s.collection, heroPicks[i].map((p) => p.images[0])]));
   const fresh = diverse(newest.items).slice(0, 10);
   const freshIds = new Set(fresh.map((p) => p.id));
   const value = diverse(cheapest.items.filter((p) => !freshIds.has(p.id))).slice(0, 10);
   const newsletterImages = [...dupattas, ...kalamkari].map((p) => p.images[0]);
   const collectionCover = (slug: string) => covers[slug] ?? "/placeholder.svg";
-  const count = (slug: string) => counts[slug] ?? 0;
+  const count = (slug: string) => counts[slug];
 
   return (
     <>
       <Hero images={heroImages} />
+
+      {unavailable && <div role="status" className="mx-auto mt-6 max-w-[1400px] px-4 text-sm text-ink-soft sm:px-6">
+        Some products are temporarily unavailable. Please try again in a moment. <form action="/" className="inline"><button type="submit" className="font-medium underline">Try again</button></form>
+      </div>}
 
       <Section eyebrow="Just in" title="New Arrivals" href="/c/new-arrivals">
         <ProductRail items={fresh} />
@@ -53,7 +67,7 @@ export default async function Home() {
                     <Image src={collectionCover(slug)} alt="" fill sizes="(min-width:1024px) 12vw, 22vw" className="object-cover transition-transform duration-700 group-hover:scale-110" />
                   </span>
                   <span className="mt-4 font-heading text-sm sm:text-lg">{c.name}</span>
-                  <span className="text-[11px] text-ink-soft sm:text-xs">{n} {n === 1 ? "style" : "styles"}</span>
+                  {n !== undefined && <span className="text-[11px] text-ink-soft sm:text-xs">{n} {n === 1 ? "style" : "styles"}</span>}
                 </Link>
               </li>
             );
