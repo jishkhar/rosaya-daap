@@ -10,9 +10,9 @@ import { Price } from "@/components/ui/Price";
 import { useCart } from "@/lib/cart";
 
 export function ProductCard({ p, priority = false, sizes = "(min-width:1024px) 25vw, 50vw" }: { p: Product; priority?: boolean; sizes?: string }) {
-  const { add } = useCart();
+  const { add, ready } = useCart();
   const off = percentOff(p.price, p.mrp);
-  const quickAdd = () => add({ variantId: p.variantId, slug: p.slug, title: p.title, image: p.images[0], price: p.price, mrp: p.mrp });
+  const quickAdd = () => ready && add({ variantId: p.variantId, slug: p.slug, title: p.title, image: p.images[0], price: p.price, mrp: p.mrp });
 
   return (
     <article className="group relative">
@@ -44,6 +44,7 @@ export function ProductCard({ p, priority = false, sizes = "(min-width:1024px) 2
       </Link>
       {p.inStock && !p.hasChoices && p.variantId && (
         <button
+          disabled={!ready}
           onClick={quickAdd}
           aria-label={`Quick add ${p.title} to bag`}
           className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-cream/95 text-ink shadow transition-all hover:bg-ink hover:text-cream sm:translate-y-1 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100 focus-visible:opacity-100"

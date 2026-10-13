@@ -11,7 +11,7 @@ import { FreeShippingBar } from "@/components/cart/FreeShippingBar";
 import { ButtonLink } from "@/components/ui/Button";
 
 export function CartDrawer() {
-  const { open, setOpen, items, subtotal, setQty, remove, issues } = useCart();
+  const { open, setOpen, items, subtotal, setQty, remove, issues, storageError } = useCart();
   const pathname = usePathname();
 
   // Safety net: any navigation (e.g. the buy-it-now redirect) dismisses the drawer.
@@ -40,6 +40,7 @@ export function CartDrawer() {
           <button onClick={close} aria-label="Close" className="rounded-full p-2 hover:bg-sand"><X className="h-5 w-5" /></button>
         </div>
 
+        {storageError && <p role="alert" className="px-5 py-3 text-sm text-ink-soft">{storageError}</p>}
         {items.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
             <ShoppingBag className="h-12 w-12 text-taupe" strokeWidth={1.2} />

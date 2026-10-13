@@ -42,6 +42,7 @@ type Ctx = {
   /** server-priced figures in rupees (local estimates until the first quote arrives) */
   subtotal: number;
   ready: boolean;
+  storageError: string | null;
   open: boolean;
   setOpen: (v: boolean) => void;
   add: (item: Omit<CartItem, "key" | "qty">, qty?: number) => void;
@@ -84,28 +85,101 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [open, setOpen] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [owner, setOwner] = useState<string | null | undefined>(undefined);
+  const [storageError, setStorageError] = useState<string | null>(null);
+  const ready = authReady && owner === customerId;
+  const writeQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const activeCustomer = useRef(customerId);
+  useEffect(() => { activeCustomer.current = customerId; }, [customerId]);
 
-  // Hydrate from localStorage after mount (guest basket) -- reading it during render would cause a hydration mismatch.
+  // Resolve authentication before choosing a storage location. Never copy an account cart to the guest basket.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setItems(JSON.parse(raw));
-      setCouponCode(localStorage.getItem(COUPON_KEY));
-    } catch {}
-    setReady(true);
-  }, []);
+    if (!authReady) return;
+    let cancelled = false;
+    let retry: ReturnType<typeof setTimeout>;
+    setOwner(undefined);
+    setItems([]);
+    setCouponCode(null);
+    setQuote(null);
+    setStorageError(null);
+    const hydrate = async () => {
+      let guest: CartItem[] = [];
+      let guestCoupon: string | null = null;
+      try {
+        const parsed = JSON.parse(localStorage.getItem(KEY) || "[]");
+        if (Array.isArray(parsed)) guest = parsed.filter((i) => i && typeof i.variantId === "string" && Number.isInteger(i.qty) && i.qty > 0);
+        guestCoupon = localStorage.getItem(COUPON_KEY);
+      } catch {}
+      let next = guest;
+      let code = guestCoupon;
+      if (customerId) {
+        // Wait for previous writes before restoring an account on this browser.
+        await writeQueue.current;
+        if (cancelled) return;
+        const result = await call<{ items: CartItem[]; coupon_code: string | null }>("/api/basket");
+        if (cancelled) return;
+        if (!result.ok) {
+          setStorageError("Couldn't load your saved bag. Retrying…");
+          retry = setTimeout(hydrate, 3000);
+          return;
+        }
+        const merged = new Map(result.data.items.map((i) => [i.variantId, i]));
+        for (const item of guest) {
+          const saved = merged.get(item.variantId);
+          // Taking the larger quantity makes retrying a guest import safe.
+          merged.set(item.variantId, { ...item, ...saved, qty: Math.min(MAX_QTY, Math.max(item.qty, saved?.qty ?? 0)) });
+        }
+        next = [...merged.values()];
+        code = guestCoupon || result.data.coupon_code;
+        if (guest.length || guestCoupon) {
+          const saved = await call("/api/basket", { method: "PUT", body: payloadOf(next, code) });
+          if (cancelled) return;
+          if (!saved.ok) {
+            setStorageError("Couldn't save your bag. Retrying…");
+            retry = setTimeout(hydrate, 3000);
+            return;
+          }
+          try { localStorage.removeItem(KEY); localStorage.removeItem(COUPON_KEY); } catch {}
+        }
+      }
+      if (cancelled) return;
+      setItems(next);
+      setCouponCode(code);
+      setStorageError(null);
+      setOwner(customerId);
+    };
+    void hydrate();
+    return () => { cancelled = true; clearTimeout(retry); };
+  }, [authReady, customerId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!ready) return;
-    try {
-      localStorage.setItem(KEY, JSON.stringify(items));
-      if (couponCode) localStorage.setItem(COUPON_KEY, couponCode);
-      else localStorage.removeItem(COUPON_KEY);
-    } catch {}
-  }, [items, couponCode, ready]);
+    if (!customerId) {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(items));
+        if (couponCode) localStorage.setItem(COUPON_KEY, couponCode);
+        else localStorage.removeItem(COUPON_KEY);
+      } catch {}
+      return;
+    }
+    let cancelled = false;
+    let retry: ReturnType<typeof setTimeout>;
+    const body = payloadOf(items, couponCode);
+    const persist = () => {
+      // Serialize writes so an older response cannot overwrite a newer edit.
+      writeQueue.current = writeQueue.current.then(async () => {
+        if (cancelled || activeCustomer.current !== customerId) return;
+        const result = await call("/api/basket", { method: "PUT", body });
+        if (cancelled) return;
+        setStorageError(result.ok ? null : "Couldn't save your bag. Retrying…");
+        if (!result.ok) retry = setTimeout(persist, 3000);
+      });
+    };
+    persist();
+    return () => { cancelled = true; clearTimeout(retry); };
+  }, [items, couponCode, ready, customerId]);
 
   // The server is the source of truth for prices, stock and discounts: re-quote whenever the basket or code changes.
   const sig = JSON.stringify(payloadOf(items, couponCode));
@@ -125,6 +199,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setQuoting(true);
     const t = setTimeout(async () => {
       const r = await call<Quote>("/api/basket/quote", { method: "POST", body: JSON.parse(sig), signal: ctrl.signal });
+      if (ctrl.signal.aborted) return;
       if (!r.ok) {
         if (r.code !== "aborted") setQuoting(false);
         return;
@@ -156,6 +231,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const add: Ctx["add"] = useCallback((item, qty = 1) => {
+    if (!ready) return;
     const key = item.variantId;
     setItems((prev) => {
       const hit = prev.find((i) => i.key === key);
@@ -163,7 +239,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return [...prev, { ...item, key, qty: Math.min(MAX_QTY, qty) }];
     });
     setOpen(true);
-  }, []);
+  }, [ready]);
 
   const setQty = useCallback(
     (key: string, qty: number) =>
@@ -199,8 +275,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const total = quote ? quote.grand_total_minor / 100 : local;
     const above = quote?.free_shipping_above_minor != null ? quote.free_shipping_above_minor / 100 : null;
     return {
-      items, count: items.reduce((s, i) => s + i.qty, 0), subtotal, ready, open, setOpen, add, setQty, remove, clear,
-      quote, quoting, issues: quote?.issues ?? [], canCheckout: !!quote?.can_checkout && !quoting,
+      items, count: items.reduce((s, i) => s + i.qty, 0), subtotal, ready, storageError, open, setOpen, add, setQty, remove, clear,
+      quote, quoting, issues: quote?.issues ?? [], canCheckout: ready && !!quote?.can_checkout && !quoting,
       coupon, couponError: quote?.coupon && !quote.coupon.ok ? quote.coupon.reason : null, applyCoupon,
       removeCoupon: () => setCouponCode(null),
       discount, shipping, total,
@@ -209,7 +285,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       freeShippingAbove: above,
       toFreeShipping: above == null ? 0 : Math.max(0, above - (subtotal - discount)),
     };
-  }, [items, quote, quoting, ready, open, add, setQty, remove, clear, applyCoupon]);
+  }, [items, quote, quoting, ready, storageError, open, add, setQty, remove, clear, applyCoupon]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

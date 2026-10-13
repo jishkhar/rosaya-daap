@@ -3,7 +3,11 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { call } from "@/lib/http";
 
-export type User = { id: string; name: string; email: string; phone: string | null };
+export type User = {
+  id: string; name: string; email: string; phone: string | null;
+  segment: "new" | "regular" | "vip" | "inactive";
+  loyalty: { points: number; vip_min_points: number; points_per_100: number; points_to_vip: number; spend_to_vip_minor: number | null };
+};
 type Result = { ok: true } | { ok: false; error: string };
 type Ctx = {
   user: User | null;
@@ -12,6 +16,7 @@ type Ctx = {
   register: (v: { name: string; email: string; password: string; phone?: string }) => Promise<Result>;
   logout: () => Promise<void>;
   updateProfile: (v: { name?: string; phone?: string }) => Promise<Result>;
+  refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<Ctx | null>(null);
@@ -36,9 +41,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { ok: true };
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const r = await call<{ customer: User | null }>("/api/me");
+    if (r.ok && r.data.customer) {
+      const customer = r.data.customer;
+      setUser((current) => current?.id === customer.id ? customer : current);
+    }
+  }, []);
+
   const value: Ctx = {
     user,
     ready,
+    refreshUser,
     login: (email, password) => enter("/api/auth/login", { email, password }),
     register: (v) => enter("/api/auth/register", v),
     logout: async () => {

@@ -11,7 +11,7 @@ import { Qty } from "@/components/cart/CartDrawer";
 import { Button } from "@/components/ui/Button";
 
 export function PurchasePanel({ p }: { p: Product }) {
-  const { add, setOpen } = useCart();
+  const { add, setOpen, ready } = useCart();
   const router = useRouter();
   const multi = p.variants.length > 1;
   // One variant needs no choosing; several (sizes) must be picked before the bag.
@@ -29,6 +29,7 @@ export function PurchasePanel({ p }: { p: Product }) {
   const label = (v: Product["variants"][number]) => v.size ?? ([v.name, v.colour].filter((x) => x && x !== "Default").join(" · ") || "Standard");
 
   const submit = (buyNow = false) => {
+    if (!ready) return;
     if (!vid) return setNeedSize(true);
     add({ variantId: vid, slug: p.slug, title: p.title, image: p.images[0], price: variant?.price ?? p.price, mrp: variant?.mrp ?? p.mrp, size: variant?.size }, Math.min(qty, maxQty));
     if (buyNow) {
@@ -72,9 +73,9 @@ export function PurchasePanel({ p }: { p: Product }) {
         <>
           <div className="flex items-center gap-4">
             <Qty qty={qty} onChange={(q) => setQty(Math.max(1, Math.min(maxQty, q)))} />
-            <Button size="lg" className="flex-1" onClick={() => submit(false)}>{added ? <><Check className="h-4 w-4" /> Added to bag</> : "Add to Bag"}</Button>
+            <Button size="lg" className="flex-1" disabled={!ready} onClick={() => submit(false)}>{added ? <><Check className="h-4 w-4" /> Added to bag</> : "Add to Bag"}</Button>
           </div>
-          <Button variant="outline" size="lg" className="mt-3 w-full" onClick={() => submit(true)}>Buy it now</Button>
+          <Button variant="outline" size="lg" className="mt-3 w-full" disabled={!ready} onClick={() => submit(true)}>Buy it now</Button>
         </>
       ) : (
         <Button size="lg" className="w-full" disabled>Sold out</Button>

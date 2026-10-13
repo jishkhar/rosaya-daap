@@ -13,13 +13,14 @@ import { useCart } from "@/lib/cart";
 import { formatINR } from "@/lib/money";
 
 export default function CartPage() {
-  const { items, setQty, remove, ready, issues, canCheckout, quoting } = useCart();
+  const { items, setQty, remove, ready, issues, canCheckout, quoting, storageError } = useCart();
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 pb-8 sm:px-6">
       <div className="py-6"><Breadcrumb trail={[{ label: "Home", href: "/" }, { label: "Your Bag" }]} /></div>
       <h1 className="mb-8 font-heading text-4xl font-medium">Your Bag</h1>
 
+      {storageError && <p role="alert" className="mb-4 text-sm text-ink-soft">{storageError}</p>}
       {!ready ? (
         <div className="h-64 animate-pulse rounded-2xl bg-sand" aria-label="Loading bag" />
       ) : items.length === 0 ? (
