@@ -10,12 +10,13 @@ import { Price } from "@/components/ui/Price";
 import { colorHex } from "@/lib/catalog";
 import { site } from "@/lib/site";
 import { getProduct, related } from "@/lib/store";
+import { descriptionText } from "@/lib/richText";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const p = await getProduct((await params).slug);
-  return p ? { title: p.title, description: p.desc.slice(0, 155), alternates: { canonical: `/p/${p.slug}` }, openGraph: { images: [p.images[0]] } } : {};
+  return p ? { title: p.title, description: descriptionText(p.desc).slice(0, 155), alternates: { canonical: `/p/${p.slug}` }, openGraph: { images: [p.images[0]] } } : {};
 }
 
 const ACCORDIONS = (desc: string) => [
@@ -34,7 +35,7 @@ export default async function ProductPage({ params }: Props) {
     "@type": "Product",
     name: p.title,
     image: p.images,
-    description: p.desc || p.title,
+    description: descriptionText(p.desc) || p.title,
     sku: p.variants[0]?.id ?? p.id,
     category: p.category,
     offers: { "@type": "Offer", priceCurrency: "INR", price: p.price, availability: p.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock", url: `${site.url}/p/${p.slug}` },
@@ -74,7 +75,7 @@ export default async function ProductPage({ params }: Props) {
                 <summary className="flex cursor-pointer list-none items-center justify-between font-heading text-base uppercase tracking-[0.12em]">
                   {a.title}<span className="text-xl leading-none transition-transform group-open:rotate-45">+</span>
                 </summary>
-                <p className="pt-3 text-sm leading-relaxed text-ink-soft">{a.body}</p>
+                {i === 0 && /<[a-z][^>]*>/i.test(a.body) ? <div className="rich-description pt-3 text-sm leading-relaxed text-ink-soft" dangerouslySetInnerHTML={{ __html: a.body }} /> : <p className="whitespace-pre-wrap pt-3 text-sm leading-relaxed text-ink-soft">{a.body}</p>}
               </details>
             ))}
           </div>
