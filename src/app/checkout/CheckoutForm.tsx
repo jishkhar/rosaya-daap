@@ -44,9 +44,9 @@ const field = "h-12 w-full rounded-xl border border-line bg-white px-4 text-sm o
 type Placed = { order: { id: string }; payment: { mode: "cod" | "gateway" | "mock" | null; url: string | null } };
 
 export default function CheckoutForm() {
-  const { items, ready, total, clear, quote, canCheckout, quoting, issues } = useCart();
+  const { items, ready, total, clear, quote, canCheckout, quoting, issues, loyaltyPoints } = useCart();
   const router = useRouter();
-  const { user, ready: authReady } = useAuth();
+  const { user, ready: authReady, refreshUser } = useAuth();
   const [step, setStep] = useState(0);
   const [typedEmail, setTypedEmail] = useState<string | null>(null);
   const [typedPhone, setTypedPhone] = useState<string | null>(null);
@@ -146,6 +146,7 @@ export default function CheckoutForm() {
     const body = {
       items: items.map((i) => ({ variant_id: i.variantId, quantity: i.qty })),
       coupon_code: quote?.coupon?.ok ? quote.coupon.code : null,
+      loyalty_points: loyaltyPoints,
       contact: { name: addr.name.trim(), email: contact.email.trim() || null },
       address: { name: addr.name.trim(), phone: contact.phone, line1: addr.line1.trim(), line2: addr.line2.trim() || null, city: addr.city.trim(), state: addr.state.trim(), pincode: addr.pincode },
       payment_method: pay,
@@ -167,6 +168,7 @@ export default function CheckoutForm() {
     const { order, payment } = r.data;
     setPlaced(true);
     clear();
+    void refreshUser();
     if (payment.mode === "gateway" && payment.url) goTo(payment.url);
     else if (payment.mode === "mock") router.push(`/pay/${order.id}`);
     else router.push(`/order/${order.id}/success`);
@@ -188,8 +190,8 @@ export default function CheckoutForm() {
       <div className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6">
         <div className="mb-8 flex items-center justify-between"><Logo /><p className="flex items-center gap-1.5 text-xs text-ink-soft"><Lock className="h-3.5 w-3.5" /> Secure checkout</p></div>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_400px] lg:gap-12">
-          <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-12">
+          <div className="min-w-0 space-y-4">
             <Card step={step} setStep={setStep} contact={contact} addr={addr} n={0} title="Contact">
               <div className="space-y-4">
                 <div>
@@ -235,7 +237,7 @@ export default function CheckoutForm() {
             </Card>
           </div>
 
-          <aside className="h-fit space-y-4 lg:sticky lg:top-6" aria-label="Order summary and payment">
+          <aside className="h-fit min-w-0 space-y-4 lg:sticky lg:top-6" aria-label="Order summary and payment">
             <section className="rounded-2xl border border-line bg-white p-6">
               <Summary />
               <div className="mt-6 border-t border-line pt-5">
@@ -284,13 +286,48 @@ function Summary() {
         {items.map((i) => (
           <li key={i.key} className="flex items-center gap-4">
             <div className="relative shrink-0"><Image src={i.image || "/placeholder.svg"} alt="" width={64} height={84} className="h-[84px] w-16 rounded-lg object-cover" /><span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[11px] text-cream">{i.qty}</span></div>
-            <p className="line-clamp-2 flex-1 text-sm">{i.title}</p>
+            <p className="min-w-0 line-clamp-2 flex-1 text-sm">{i.title}</p>
             <p className="text-sm font-medium">{formatINR(i.price * i.qty)}</p>
           </li>
         ))}
       </ul>
       <CouponBox showAvailable />
+      <LoyaltyRedemption />
       <Totals />
     </div>
   );
+}
+
+function LoyaltyRedemption() {
+  const { quote, loyaltyPoints, setLoyaltyPoints, quoting } = useCart();
+  const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const loyalty = quote?.loyalty;
+  if (!loyalty) return null;
+  const apply = () => {
+    const points = Number(input);
+    if (!/^\d+$/.test(input) || !Number.isSafeInteger(points) || points <= 0 || points % loyalty.conversion_points || points > loyalty.max_points) {
+      setError(`Enter a multiple of ${loyalty.conversion_points}, up to ${loyalty.max_points} points.`);
+      return;
+    }
+    setError(null);
+    setLoyaltyPoints(points);
+  };
+  return <section className="space-y-3 rounded-xl border border-line p-4" aria-label="Redeem loyalty points">
+    <h3 className="text-sm font-medium">Redeem loyalty points</h3>
+    <p className="text-sm text-ink-soft">Available: <strong className="text-ink">{loyalty.balance_points.toLocaleString("en-IN")} points</strong></p>
+    <p className="text-xs text-ink-soft">{loyalty.conversion_points.toLocaleString("en-IN")} points = {formatINR(loyalty.conversion_value_minor / 100)} off</p>
+    {loyaltyPoints > 0 ? <div className="flex items-center justify-between gap-3 text-sm">
+      <span aria-live="polite">{quoting ? "Updating deduction…" : `Using ${loyaltyPoints.toLocaleString("en-IN")} points`}</span>
+      <button type="button" onClick={() => { setLoyaltyPoints(0); setError(null); }} className="underline underline-offset-4">Remove</button>
+    </div> : <>
+      <label htmlFor="redeem-points" className="sr-only">Points to redeem</label>
+      <div className="flex gap-2">
+        <input id="redeem-points" type="number" inputMode="numeric" min={loyalty.conversion_points} max={loyalty.max_points} step={loyalty.conversion_points} value={input} onChange={(e) => { setInput(e.target.value); setError(null); }} placeholder="Points to redeem" disabled={quoting || loyalty.max_points === 0} className="h-11 min-w-0 flex-1 rounded-full border border-line bg-white px-4 text-sm disabled:opacity-50" />
+        <button type="button" onClick={apply} disabled={quoting || loyalty.max_points === 0} className="rounded-full bg-taupe px-5 text-sm font-medium disabled:opacity-50">Apply</button>
+      </div>
+      {loyalty.max_points > 0 ? <button type="button" disabled={quoting} onClick={() => { setInput(String(loyalty.max_points)); setLoyaltyPoints(loyalty.max_points); setError(null); }} className="text-xs underline underline-offset-4">Use maximum ({loyalty.max_points.toLocaleString("en-IN")} points)</button> : <p className="text-xs text-ink-soft">No points available to redeem on this order.</p>}
+    </>}
+    {(error || loyalty.reason) && <p role="alert" className="text-xs text-danger">{error || loyalty.reason}</p>}
+  </section>;
 }

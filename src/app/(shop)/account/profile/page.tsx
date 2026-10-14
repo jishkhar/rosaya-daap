@@ -113,8 +113,8 @@ export default function ProfilePage() {
               <progress aria-label="Progress to VIP" className="h-2 w-full accent-ink" max={Math.max(1, user.loyalty.vip_min_points)} value={Math.max(0, Math.min(user.loyalty.points, user.loyalty.vip_min_points))} />
               <p className="text-sm"><strong>{user.loyalty.points_to_vip.toLocaleString("en-IN")} more points</strong> to reach VIP.</p>
               {user.loyalty.spend_to_vip_minor != null ? <>
-                <p className="text-sm text-ink-soft">Spend <strong className="text-ink">{new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(user.loyalty.spend_to_vip_minor / 100)}</strong> more on completed orders to reach VIP.</p>
-                <p className="text-xs text-ink-soft">Earn {user.loyalty.points_per_100} points per ₹100. Refunds and point redemptions can change your progress.</p>
+                <p className="text-sm text-ink-soft">Spend <strong className="text-ink">{new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(user.loyalty.spend_to_vip_minor / 100)}</strong> more to reach VIP.</p>
+                <p className="text-xs text-ink-soft">Earn {user.loyalty.points_per_100} points per ₹100 when you place an order. Cancellations, refunds and point redemptions can change your progress.</p>
               </> : <p className="text-xs text-ink-soft">Purchase points are currently disabled. You can reach VIP through bonus points.</p>}
               {user.segment === "new" && <p className="text-xs text-ink-soft">Regular status depends on account age and completed orders. You can reach VIP directly by earning enough points.</p>}
               {user.segment === "inactive" && <p className="text-xs text-ink-soft">Your account is currently Inactive based on your last completed order.</p>}
