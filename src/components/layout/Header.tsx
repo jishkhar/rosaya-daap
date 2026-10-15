@@ -38,15 +38,16 @@ export function Header({ covers }: { covers: Record<string, string> }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-cream/95 backdrop-blur" onMouseLeave={() => setMega(null)}>
       <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-4 sm:h-[76px] sm:px-6">
-        <button className="-ml-2 rounded-full p-2 hover:bg-sand lg:hidden" aria-label="Open menu" onClick={() => setMobile(true)}>
+        <button className="-ml-2 rounded-full p-2 hover:bg-sand xl:hidden" aria-label="Open menu" onClick={() => setMobile(true)}>
           <Menu className="h-6 w-6" />
         </button>
         <Logo />
 
-        <nav aria-label="Main" className="mx-auto hidden items-center gap-1 lg:flex">
+        <nav aria-label="Main" className="mx-auto hidden items-center gap-1 xl:flex">
           <Link href="/c/new-arrivals" className="rounded-full px-3.5 py-2 text-sm font-medium hover:bg-sand" onMouseEnter={() => setMega(null)}>
             New Arrivals
           </Link>
+          <Link href="/collections" className="rounded-full px-3.5 py-2 text-sm font-medium hover:bg-sand" onMouseEnter={() => setMega(null)}>Collections</Link>
           {MEGA.slice(0, 3).map((m) => (
             <MegaTrigger key={m.key} m={m} open={mega === m.key} setMega={setMega} />
           ))}
@@ -56,10 +57,10 @@ export function Header({ covers }: { covers: Record<string, string> }) {
           <MegaTrigger m={MEGA[3]} open={mega === "acc"} setMega={setMega} />
         </nav>
 
-        <div className="ml-auto flex items-center gap-1 lg:ml-0">
-          <button className="flex items-center gap-2 rounded-full p-2.5 text-sm hover:bg-sand lg:border lg:border-line lg:bg-white lg:py-2 lg:pl-4 lg:pr-12 lg:text-ink-soft lg:hover:border-ink" aria-label="Search" onClick={() => setSearch(true)}>
-            <Search className="h-[22px] w-[22px] lg:h-4 lg:w-4" />
-            <span className="hidden lg:inline">Search</span>
+        <div className="ml-auto flex items-center gap-1 xl:ml-0">
+          <button className="flex items-center gap-2 rounded-full p-2.5 text-sm hover:bg-sand xl:border xl:border-line xl:bg-white xl:py-2 xl:pl-4 xl:pr-12 xl:text-ink-soft xl:hover:border-ink" aria-label="Search" onClick={() => setSearch(true)}>
+            <Search className="h-[22px] w-[22px] xl:h-4 xl:w-4" />
+            <span className="hidden xl:inline">Search</span>
           </button>
           <Link href={user ? "/account" : "/login"} className="hidden rounded-full p-2.5 hover:bg-sand sm:block" aria-label={user ? "My account" : "Log in"}>
             <User className="h-[22px] w-[22px]" />
@@ -76,7 +77,7 @@ export function Header({ covers }: { covers: Record<string, string> }) {
       </div>
 
       {active && (
-        <div className="animate-fade-up absolute inset-x-0 top-full hidden border-b border-line bg-cream shadow-lg lg:block" onMouseEnter={() => setMega(active.key)}>
+        <div className="animate-fade-up absolute inset-x-0 top-full hidden border-b border-line bg-cream shadow-lg xl:block" onMouseEnter={() => setMega(active.key)}>
           <div className="mx-auto grid max-w-[1400px] grid-cols-[1fr_320px] gap-10 px-6 py-8">
             <div className="grid grid-cols-2 gap-x-8">
               {active.groups.map((g) => (
@@ -128,7 +129,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
   const [openKey, setOpenKey] = useState<string | null>(null);
   return (
-    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+    <div className="fixed inset-0 z-50 xl:hidden" role="dialog" aria-modal="true" aria-label="Menu">
       <button aria-label="Close menu" className="absolute inset-0 bg-ink/50" onClick={onClose} />
       <div className="animate-slide-in-left relative flex h-full w-[86%] max-w-sm flex-col bg-cream text-ink">
         <div className="flex h-16 items-center justify-between border-b border-line px-4">
@@ -139,6 +140,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
         </div>
         <nav className="flex-1 overflow-y-auto px-4 py-2" aria-label="Mobile">
           <Link href="/c/new-arrivals" onClick={onClose} className="block border-b border-line py-4 font-heading text-lg">New Arrivals</Link>
+          <Link href="/collections" onClick={onClose} className="block border-b border-line py-4 font-heading text-lg">Collections</Link>
           {MEGA.slice(0, 3).map((m) => (
             <div key={m.key} className="border-b border-line">
               <button className="flex w-full items-center justify-between py-4 font-heading text-lg" aria-expanded={openKey === m.key} onClick={() => setOpenKey(openKey === m.key ? null : m.key)}>

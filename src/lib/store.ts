@@ -53,7 +53,7 @@ function toProduct(a: ApiProduct): Product {
 }
 
 /* ---------- queries ---------- */
-export type Scope = { category?: string; craft?: string; occasion?: string; q?: string; sort?: string };
+export type Scope = { collectionId?: string; category?: string; craft?: string; occasion?: string; q?: string; sort?: string };
 export type Facets = { colors: ApiFacet[]; crafts: ApiFacet[]; min: number; max: number };
 
 function query(params: Record<string, string | number | boolean | undefined>) {
@@ -73,6 +73,7 @@ export async function listProducts(opts: {
   const { scope = {}, searchParams = {}, limit = 24, offset = 0, facets = false, revalidate } = opts;
   const f = parseFilters(searchParams);
   const qs = query({
+    collection_id: scope.collectionId,
     category: scope.category,
     in_craft: scope.craft,
     in_occasion: scope.occasion,
@@ -114,6 +115,31 @@ export async function getProduct(slug: string): Promise<Product | null> {
   } catch (e) {
     if ((e as { status?: number }).status === 404) return null;
     throw e;
+  }
+}
+
+export type StoreCollection = {
+  id: string;
+  slug: string;
+  name: string;
+  blurb: string;
+  image_url: string | null;
+  product_count: number;
+  updated_at: string;
+};
+
+/** ERP selections stay live: collection metadata is never cached across requests. */
+export async function getStoreCollections(): Promise<StoreCollection[]> {
+  return (await api<{ custom?: StoreCollection[] }>("/collections")).custom ?? [];
+}
+
+export async function getStoreCollection(id: string): Promise<StoreCollection | null> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  try {
+    return await api<StoreCollection>(`/collections/${id}`);
+  } catch (error) {
+    if ((error as { status?: number }).status === 404) return null;
+    throw error;
   }
 }
 

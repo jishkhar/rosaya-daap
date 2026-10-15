@@ -30,7 +30,11 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   },
 ];
 
-export function Footer() {
+export function Footer({ collections = [] }: { collections?: { slug: string; name: string }[] }) {
+  const columns = COLUMNS.map((column) => column.title === "Collections" ? {
+    ...column,
+    links: [...collections.slice(0, 6).map((c) => ({ label: c.name, href: `/c/${c.slug}` })), { label: "All collections", href: "/collections" }, ...column.links],
+  } : column);
   return (
     <footer className="mt-24 bg-ink text-cream">
       <div className="mx-auto max-w-[1400px] px-4 py-14 sm:px-6">
@@ -60,7 +64,7 @@ export function Footer() {
 
           {/* Link columns: accordion on mobile, grid on desktop */}
           <div className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-4">
-            {COLUMNS.map((c) => (
+            {columns.map((c) => (
               <FooterColumn key={c.title} title={c.title} links={c.links} />
             ))}
           </div>

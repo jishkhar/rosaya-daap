@@ -37,3 +37,11 @@ Vercel needs `STORE_API_BASE` set to the deployed ERP's public HTTPS origin and 
 Backend reads have a 10-second deadline, including response-body loading. Writes have a 30-second deadline and are never automatically retried. The homepage keeps its navigation and category links available when catalogue requests fail and offers a full-page retry; unavailable category counts are omitted rather than shown as zero. Other pages use the existing error boundary, and API callers receive a structured timeout error. Timeout logs include only the method and path, without credentials or query strings.
 
 Run `npm test` for backend timeout and response regression checks. When investigating a live loading problem, check Vercel function logs and the ERP's health and catalogue endpoints as well as the homepage: a streamed HTTP 200 alone does not prove the page finished rendering.
+
+## ERP collections
+
+Saved ERP collections appear on `/collections`, in the homepage’s curated collections section, and through the Collections navigation link. Each has a stable `/c/collection-<uuid>` page showing its cover, description and matching products. Renaming a collection keeps its link working. Collection metadata and product pages read live ERP data rather than a build-time list; refreshing after an ERP save reflects changes without redeploying the storefront.
+
+Manual selections, their ordering, automatic conditions and exclusions all apply. Multiple selected variants of one design appear as one storefront product. Only active, published products are shown; adding drafts to a collection does not publish them. Counts, fallback images and filters use this same public selection. The storefront’s server-only Online channel key determines which business it reads.
+
+Deploy the updated backend before the storefront. The database must already have migrations through `0053` (collection covers and conditions); this connection needs no additional migration.

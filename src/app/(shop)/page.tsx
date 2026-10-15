@@ -1,12 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Tag, Truck } from "lucide-react";
+import { CollectionTiles } from "@/components/home/CollectionTiles";
 import { Hero } from "@/components/home/Hero";
 import { ProductRail } from "@/components/home/ProductRail";
 import { Section } from "@/components/home/Section";
 import { Newsletter } from "@/components/layout/Newsletter";
 import { byKind, getCollection, heroSlides, valueProps } from "@/content/site";
-import { collectionCounts, collectionCovers, distinct, diverse, listProducts, NEW_ARRIVALS, scopeOf } from "@/lib/store";
+import { collectionCounts, collectionCovers, getStoreCollections, distinct, diverse, listProducts, NEW_ARRIVALS, scopeOf } from "@/lib/store";
 
 const ICONS = { truck: Truck, badge: BadgeCheck, tag: Tag };
 const TILE_SLUGS = ["sarees", "lehengas", "kurtis", "blouses", "suits", "dresses", "dupattas", "bridal"];
@@ -26,7 +27,9 @@ export default async function Home() {
     collectionCounts(),
     peek("dupattas", 1),
     peek("kalamkari", 1),
+    getStoreCollections(),
   ]);
+  const customCollections = settledValue(results[7], []);
   const unavailable = results.some((result) => result.status === "rejected");
   const heroPicks = settledValue(results[0], heroSlides.map(() => []));
   const newest = settledValue(results[1], emptyProducts);
@@ -50,6 +53,8 @@ export default async function Home() {
       {unavailable && <div role="status" className="mx-auto mt-6 max-w-[1400px] px-4 text-sm text-ink-soft sm:px-6">
         Some products are temporarily unavailable. Please try again in a moment. <form action="/" className="inline"><button type="submit" className="font-medium underline">Try again</button></form>
       </div>}
+
+      {customCollections.length > 0 && <Section eyebrow="Curated for you" title="Collections for every moment" href="/collections"><CollectionTiles collections={customCollections.slice(0, 8)} /></Section>}
 
       <Section eyebrow="Just in" title="New Arrivals" href="/c/new-arrivals">
         <ProductRail items={fresh} />
