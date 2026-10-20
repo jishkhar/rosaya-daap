@@ -41,10 +41,15 @@ test("browse, filter, add to bag, coupon, register and check out with cash on de
   await page.getByRole("dialog", { name: "Choose payment method" }).getByText("Cash on delivery").click();
   await page.getByRole("button", { name: /place order/i }).click();
 
-  await expect(page).toHaveURL(/\/order\/[0-9a-f-]+\/success/);
+  await expect(page).toHaveURL(/\/checkout\?order=[0-9a-f-]+$/);
+  await expect(page.getByRole("dialog", { name: "Order confirmation" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /thank you/i })).toBeVisible();
   await expect(page.getByText(/ORD\d+/).first()).toBeVisible();
   await expect(page.getByText("Cash on delivery").first()).toBeVisible();
+  // Confirmation survives refresh even though placing the order emptied the bag.
+  await page.reload();
+  await expect(page.getByRole("dialog", { name: "Order confirmation" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /thank you/i })).toBeVisible();
 
   // the bag was emptied
   await page.goto("/cart");
@@ -58,9 +63,8 @@ test("a pincode we don't serve is refused before payment is offered", async ({ p
   await addFirstProductToBag(page);
   await page.goto("/checkout");
   await page.getByLabel("Mobile number").fill("9876543210");
-  await page.getByRole("button", { name: /continue to address/i }).click();
   await page.getByLabel("Pincode").fill("12345");
-  await page.getByRole("button", { name: /continue to payment/i }).click();
+  await page.getByRole("button", { name: /^Pay ·/ }).click();
   await expect(page.locator("[role=alert]:not(#__next-route-announcer__)").first()).toBeVisible();
 });
 

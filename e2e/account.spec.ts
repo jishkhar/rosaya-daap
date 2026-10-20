@@ -31,16 +31,29 @@ test("register, save an address, pay online, see the order, reorder, sign out an
 
   // online payment (the ERP's development gateway stand-in)
   await addFirstProductToBag(page);
+  const browserAddressRequests: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/me/addresses") browserAddressRequests.push(request.url());
+  });
   await page.goto("/checkout");
   await expect(page.getByLabel("Mobile number")).toHaveValue("9876543210");   // prefilled from the saved address
-  await page.getByRole("button", { name: /continue to address/i }).click();
-  await page.getByRole("button", { name: /Home · 12 MG Road/ }).click();
-  await page.getByRole("button", { name: /continue to payment/i }).click();
+  await expect(page.getByLabel("Address", { exact: true })).toHaveValue("12 MG Road, Navrangpura");
+  await expect(page.getByLabel("Pincode")).toHaveValue("380009");
+  await expect(page.getByLabel("City")).toHaveValue("Ahmedabad");
+  await expect(page.getByLabel("State")).toHaveValue("Gujarat");
+  expect(browserAddressRequests).toEqual([]);
+  await page.getByLabel("Address", { exact: true }).fill("A temporary checkout edit");
+  const savedHome = page.getByRole("button", { name: /^Home · 12 MG Road/ });
+  await savedHome.click();
+  await expect(savedHome).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("Address", { exact: true })).toHaveValue("12 MG Road, Navrangpura");
+  await expect(page.getByRole("button", { name: /continue to payment/i })).toHaveCount(0);
   await page.getByRole("button", { name: /^Pay · / }).click();
   await page.getByRole("dialog", { name: "Choose payment method" }).getByRole("button", { name: /^Pay online ·/ }).click();
   await expect(page).toHaveURL(/\/pay\//);
   await page.getByRole("button", { name: /pay now \(test\)/i }).click();
-  await expect(page).toHaveURL(/\/order\/[0-9a-f-]+\/success/);
+  await expect(page).toHaveURL(/\/checkout\?order=[0-9a-f-]+$/);
+  await expect(page.getByRole("dialog", { name: "Order confirmation" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /thank you/i })).toBeVisible();
   await expect(page.getByText("Paid online").first()).toBeVisible();
 

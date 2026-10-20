@@ -1,28 +1,21 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { SearchOverlay } from "@/components/layout/SearchOverlay";
-import { byKind, getCollection, nav } from "@/content/site";
+import type { StoreCollection } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 
-type Mega = { key: string; label: string; groups: { title?: string; slugs: string[] }[]; feature: string };
-
-const MEGA: Mega[] = [
-  { key: "women", label: "Women", groups: [{ title: "Shop by style", slugs: nav.women }], feature: "sarees" },
-  { key: "craft", label: "Shop by Craft", groups: [{ title: "Handcrafted traditions", slugs: byKind("craft").map((c) => c.slug) }], feature: "ajrakh" },
-  { key: "occasion", label: "Occasion", groups: [{ title: "Dress for the day", slugs: byKind("occasion").map((c) => c.slug) }], feature: "wedding" },
-  { key: "acc", label: "Accessories", groups: [{ title: "Finishing touches", slugs: nav.accessories }], feature: "dupattas" },
-];
-
-export function Header({ covers }: { covers: Record<string, string> }) {
+export function Header({ collections }: { collections: StoreCollection[] }) {
+  const headerCollections = collections
+    .filter((c) => c.show_in_header)
+    .sort((a, b) => a.header_order - b.header_order)
+    .slice(0, 5);
   const { count, setOpen } = useCart();
   const { user } = useAuth();
-  const [mega, setMega] = useState<string | null>(null);
   const [mobile, setMobile] = useState(false);
   const [search, setSearch] = useState(false);
 
@@ -33,28 +26,19 @@ export function Header({ covers }: { covers: Record<string, string> }) {
     };
   }, [mobile]);
 
-  const active = MEGA.find((m) => m.key === mega);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-cream/95 backdrop-blur" onMouseLeave={() => setMega(null)}>
+    <header className="sticky top-0 z-40 border-b border-line bg-cream/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-4 sm:h-[76px] sm:px-6">
         <button className="-ml-2 rounded-full p-2 hover:bg-sand xl:hidden" aria-label="Open menu" onClick={() => setMobile(true)}>
           <Menu className="h-6 w-6" />
         </button>
         <Logo />
 
-        <nav aria-label="Main" className="mx-auto hidden items-center gap-1 xl:flex">
-          <Link href="/c/new-arrivals" className="rounded-full px-3.5 py-2 text-sm font-medium hover:bg-sand" onMouseEnter={() => setMega(null)}>
-            New Arrivals
-          </Link>
-          <Link href="/collections" className="rounded-full px-3.5 py-2 text-sm font-medium hover:bg-sand" onMouseEnter={() => setMega(null)}>Collections</Link>
-          {MEGA.slice(0, 3).map((m) => (
-            <MegaTrigger key={m.key} m={m} open={mega === m.key} setMega={setMega} />
+        <nav aria-label="Main" className="mx-auto hidden items-center gap-1 self-stretch xl:flex">
+          {headerCollections.map((c) => (
+            <CollectionNavItem key={c.id} collection={c} />
           ))}
-          <Link href="/c/garba" className="rounded-full px-3.5 py-2 text-sm font-medium hover:bg-sand" onMouseEnter={() => setMega(null)}>
-            Garba
-          </Link>
-          <MegaTrigger m={MEGA[3]} open={mega === "acc"} setMega={setMega} />
         </nav>
 
         <div className="ml-auto flex items-center gap-1 xl:ml-0">
@@ -76,58 +60,14 @@ export function Header({ covers }: { covers: Record<string, string> }) {
         </div>
       </div>
 
-      {active && (
-        <div className="animate-fade-up absolute inset-x-0 top-full hidden border-b border-line bg-cream shadow-lg xl:block" onMouseEnter={() => setMega(active.key)}>
-          <div className="mx-auto grid max-w-[1400px] grid-cols-[1fr_320px] gap-10 px-6 py-8">
-            <div className="grid grid-cols-2 gap-x-8">
-              {active.groups.map((g) => (
-                <div key={g.title} className="col-span-2">
-                  <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-taupe-dark">{g.title}</p>
-                  <ul className="grid grid-cols-2 gap-x-8 gap-y-1">
-                    {g.slugs.map((s) => (
-                      <li key={s}>
-                        <Link href={`/c/${s}`} onClick={() => setMega(null)} className="block rounded py-2 font-heading text-lg hover:text-taupe-dark hover:underline hover:underline-offset-4">
-                          {getCollection(s)?.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-            <Link href={`/c/${active.feature}`} onClick={() => setMega(null)} className="group relative block h-56 overflow-hidden rounded-xl">
-              <Image src={covers[active.feature] ?? "/placeholder.svg"} alt="" fill sizes="320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
-              <span className="absolute inset-0 bg-gradient-to-t from-ink/70 to-transparent" />
-              <span className="absolute bottom-4 left-4 font-heading text-xl text-cream">Shop {getCollection(active.feature)?.name} →</span>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {mobile && <MobileMenu onClose={() => setMobile(false)} />}
+      {mobile && <MobileMenu collections={headerCollections} onClose={() => setMobile(false)} />}
       {search && <SearchOverlay onClose={() => setSearch(false)} />}
     </header>
   );
 }
 
-function MegaTrigger({ m, open, setMega }: { m: Mega; open: boolean; setMega: (k: string | null) => void }) {
-  return (
-    <button
-      aria-expanded={open}
-      onMouseEnter={() => setMega(m.key)}
-      onFocus={() => setMega(m.key)}
-      onClick={() => setMega(open ? null : m.key)}
-      className={`flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-medium hover:bg-sand ${open ? "bg-sand" : ""}`}
-    >
-      {m.label}
-      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
-    </button>
-  );
-}
-
-function MobileMenu({ onClose }: { onClose: () => void }) {
+function MobileMenu({ collections, onClose }: { collections: StoreCollection[]; onClose: () => void }) {
   const { user } = useAuth();
-  const [openKey, setOpenKey] = useState<string | null>(null);
   return (
     <div className="fixed inset-0 z-50 xl:hidden" role="dialog" aria-modal="true" aria-label="Menu">
       <button aria-label="Close menu" className="absolute inset-0 bg-ink/50" onClick={onClose} />
@@ -139,27 +79,9 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <nav className="flex-1 overflow-y-auto px-4 py-2" aria-label="Mobile">
-          <Link href="/c/new-arrivals" onClick={onClose} className="block border-b border-line py-4 font-heading text-lg">New Arrivals</Link>
-          <Link href="/collections" onClick={onClose} className="block border-b border-line py-4 font-heading text-lg">Collections</Link>
-          {MEGA.slice(0, 3).map((m) => (
-            <div key={m.key} className="border-b border-line">
-              <button className="flex w-full items-center justify-between py-4 font-heading text-lg" aria-expanded={openKey === m.key} onClick={() => setOpenKey(openKey === m.key ? null : m.key)}>
-                {m.label}
-                <ChevronDown className={`h-5 w-5 transition-transform ${openKey === m.key ? "rotate-180" : ""}`} />
-              </button>
-              {openKey === m.key && (
-                <ul className="pb-3 pl-2">
-                  {m.groups.flatMap((g) => g.slugs).map((s) => (
-                    <li key={s}>
-                      <Link href={`/c/${s}`} onClick={onClose} className="block py-2.5 text-ink-soft">{getCollection(s)?.name}</Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+          {collections.map((c) => (
+            <CollectionNavItem key={c.id} collection={c} mobile onNavigate={onClose} />
           ))}
-          <Link href="/c/garba" onClick={onClose} className="block border-b border-line py-4 font-heading text-lg">Garba Collection</Link>
-          <Link href="/c/dupattas" onClick={onClose} className="block border-b border-line py-4 font-heading text-lg">Accessories</Link>
           <Link href="/shop" onClick={onClose} className="block py-4 font-heading text-lg">Shop All</Link>
         </nav>
         <div className="border-t border-line p-4">
@@ -168,4 +90,47 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   );
+}
+
+function CollectionNavItem({ collection, mobile = false, onNavigate }: { collection: StoreCollection; mobile?: boolean; onNavigate?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const menuId = useId();
+  const trigger = useRef<HTMLButtonElement>(null);
+  const children = collection.dropdown_collections ?? [];
+  const linkClass = mobile ? "block border-b border-line py-4 font-heading text-lg" : "block rounded-full px-3.5 py-2 text-sm font-medium hover:bg-sand";
+  if (!collection.header_dropdown || !children.length) {
+    return <Link href={`/c/${collection.slug}`} onClick={onNavigate} className={linkClass}>{collection.name}</Link>;
+  }
+  const navigate = () => { setOpen(false); onNavigate?.(); };
+  return <div
+    className={mobile ? "border-b border-line" : "flex items-center self-stretch"}
+    onMouseEnter={() => { if (!mobile) setOpen(true); }}
+    onMouseLeave={() => { if (!mobile) setOpen(false); }}
+    onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}
+    onKeyDown={(event) => {
+      if (event.key === "Escape" && open) { event.preventDefault(); event.stopPropagation(); setOpen(false); trigger.current?.focus(); }
+    }}
+  >
+    <button
+      ref={trigger}
+      type="button"
+      aria-expanded={open}
+      aria-controls={menuId}
+      className={mobile ? "flex w-full items-center justify-between py-4 text-left font-heading text-lg" : "flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-medium hover:bg-sand"}
+      onClick={() => setOpen(!open)}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowDown") {
+          event.preventDefault(); setOpen(true);
+          requestAnimationFrame(() => document.getElementById(menuId)?.querySelector<HTMLAnchorElement>("a")?.focus());
+        }
+      }}
+    >
+      {collection.name}<ChevronDown aria-hidden="true" className={`h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+    </button>
+    <div id={menuId} hidden={!open} className={mobile ? "pb-3 pl-3" : "absolute inset-x-0 top-full z-50 border-y border-line bg-cream shadow-lg"}>
+      <ul className={mobile ? "space-y-1" : "mx-auto grid max-h-[65vh] max-w-[1400px] grid-cols-4 gap-x-8 gap-y-1 overflow-y-auto px-6 py-6"}>
+        {children.map((child) => <li key={child.id}><Link href={`/c/${child.slug}`} onClick={navigate} className="block rounded-lg px-3 py-2.5 text-lg text-ink-soft hover:bg-sand hover:text-ink">{child.name}</Link></li>)}
+      </ul>
+    </div>
+  </div>;
 }

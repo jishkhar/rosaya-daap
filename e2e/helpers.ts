@@ -25,14 +25,11 @@ export async function addFirstProductToBag(page: Page, path = "/c/sarees?stock=1
   return title;
 }
 
-export async function fillAddress(page: Page, v: { phone: string; email?: string; name?: string } & Partial<Record<"line1" | "pincode" | "city" | "state", string>>) {
+export async function fillAddress(page: Page, v: { phone: string; name?: string } & Partial<Record<"line1" | "pincode" | "city" | "state", string>>) {
   await page.getByLabel("Mobile number").fill(v.phone);
-  if (v.email) await page.getByLabel(/^Email/, { exact: false }).first().fill(v.email);
-  await page.getByRole("button", { name: /continue to address/i }).click();
   await page.getByLabel("Full name").fill(v.name ?? "Asha Rao");
   await page.getByLabel("Address", { exact: true }).fill(v.line1 ?? "12 MG Road, Navrangpura");
   await page.getByLabel("Pincode").fill(v.pincode ?? "380009");
   await page.getByLabel("City").fill(v.city ?? "Ahmedabad");
   await page.getByLabel("State").fill(v.state ?? "Gujarat");
-  await page.getByRole("button", { name: /continue to payment/i }).click();
 }

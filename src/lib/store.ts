@@ -119,6 +119,10 @@ export async function getProduct(slug: string): Promise<Product | null> {
 }
 
 export type StoreCollection = {
+  show_in_header: boolean;
+  header_order: number;
+  header_dropdown: boolean;
+  dropdown_collections: { id: string; slug: string; name: string }[];
   id: string;
   slug: string;
   name: string;

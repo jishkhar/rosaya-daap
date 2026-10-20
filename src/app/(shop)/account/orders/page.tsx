@@ -33,7 +33,7 @@ export default function OrdersPage() {
     setPayError(null);
     const r = await call<{ mode: string; url: string | null }>(`/api/orders/${o.id}/pay`, { method: "POST", body: {} });
     if (!r.ok) return setPayError(r.error);
-    goTo(r.data.url ?? (r.data.mode === "mock" ? `/pay/${o.id}` : `/order/${o.id}/success`));
+    goTo(r.data.url ?? (r.data.mode === "mock" ? `/pay/${o.id}` : `/checkout?order=${encodeURIComponent(o.id)}`));
   };
 
   return (

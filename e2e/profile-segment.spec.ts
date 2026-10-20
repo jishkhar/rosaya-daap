@@ -17,10 +17,9 @@ test("profile membership card shows upgrade progress and refreshes the CRM segme
     const headingBox = await details.boundingBox();
     const card = page.getByRole("complementary", { name: "Your membership" });
     const cardBox = await card.boundingBox();
-    if (page.viewportSize()!.width >= 1024) {
-      expect(cardBox!.x).toBeGreaterThan(headingBox!.x + headingBox!.width);
-      expect(cardBox!.y).toBeLessThan(headingBox!.y);
-    } else expect(cardBox!.y).toBeGreaterThan(headingBox!.y);
+    expect(cardBox!.y + cardBox!.height).toBeLessThan(headingBox!.y);
+    expect(cardBox!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+    await expect(card).toContainText("Rosaya Rewards Club");
     if (key === "vip") {
       await expect(card).toContainText("our highest tier");
       await expect(card.getByRole("progressbar")).toHaveCount(0);

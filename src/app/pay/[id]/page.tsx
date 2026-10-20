@@ -32,7 +32,7 @@ export default function MockPay({ params }: { params: Promise<{ id: string }> })
       setBusy(false);
       return setError(r.status === 404 ? "Test payments are switched off on this server." : r.error);
     }
-    router.push(`/order/${id}/success`);
+    router.replace(`/checkout?order=${encodeURIComponent(id)}`);
   };
 
   return (

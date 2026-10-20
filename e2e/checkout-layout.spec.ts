@@ -6,7 +6,7 @@ const expect = baseExpect.configure({ timeout: 30_000 });
 test("pay opens payment options after validation and customer offers can be applied", async ({ page, isMobile }, testInfo) => {
   test.setTimeout(120_000);
   await page.goto("/register");
-  await registerShopper(page);
+  const shopper = await registerShopper(page);
   await expect(page).toHaveURL(/\/account$/);
 
   // Exercise rendering and selecting server-provided offers without changing live discount records.
@@ -29,6 +29,12 @@ test("pay opens payment options after validation and customer offers can be appl
 
   await addFirstProductToBag(page);
   await page.goto("/checkout");
+  await expect(page.getByRole("heading", { name: "Checkout", exact: true })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Checkout progress" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expect(page.getByRole("heading", { name: /Contact$/ })).toHaveCount(0);
+  await expect(page.getByLabel("Email", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /Shipping address$/ })).toBeVisible();
   const column = page.getByRole("complementary", { name: "Order summary and payment" });
   const summary = column.getByRole("heading", { name: "Order summary", exact: true });
   const payment = column.getByRole("button", { name: /^Pay ·|Updating total/ });
@@ -43,8 +49,8 @@ test("pay opens payment options after validation and customer offers can be appl
   const totalBox = await column.getByText("Total", { exact: true }).boundingBox();
   expect(paymentBox!.y).toBeGreaterThan(totalBox!.y);
   if (!isMobile) {
-    const contactBox = await page.getByRole("heading", { name: /Contact$/ }).boundingBox();
-    expect(paymentBox!.x).toBeGreaterThan(contactBox!.x);
+    const addressBox = await page.getByRole("heading", { name: /Shipping address$/ }).boundingBox();
+    expect(paymentBox!.x).toBeGreaterThan(addressBox!.x);
   }
 
   await expect(column.getByRole("button", { name: "Apply coupon SAVE10" })).not.toBeVisible();
@@ -71,7 +77,10 @@ test("pay opens payment options after validation and customer offers can be appl
   expect(submitted).toBe(false);
   await dialog.getByRole("radio", { name: /Cash on delivery/ }).check();
   await page.route("**/api/checkout", async (route) => {
-    expect(route.request().postDataJSON().payment_method).toBe("cod");
+    const order = route.request().postDataJSON();
+    expect(order.payment_method).toBe("cod");
+    expect(order.contact.email).toBe(shopper.email);
+    expect(order.address.phone).toBe("9876543210");
     await route.fulfill({ status: 422, json: { error: { code: "validation_failed", message: "Test order stopped." } } });
   });
   await dialog.getByRole("button", { name: /^Place order/ }).click();
@@ -80,5 +89,8 @@ test("pay opens payment options after validation and customer offers can be appl
   await dialog.getByRole("button", { name: "Close payment options" }).click();
   await expect(dialog).not.toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("checkout.png"), fullPage: true });
+  await page.getByRole("link", { name: "Back to bag", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Your Bag", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Proceed to checkout/i })).toBeVisible();
   await page.unrouteAll({ behavior: "wait" });
 });
