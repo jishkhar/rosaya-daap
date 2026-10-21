@@ -4,16 +4,17 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
-import { SearchOverlay } from "@/components/layout/SearchOverlay";
+import { SearchOverlay } from "@/themes/heritage/layout/SearchOverlay";
 import type { StoreCollection } from "@/lib/store";
+import type { Values } from "@/themes/schema";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 
-export function Header({ collections }: { collections: StoreCollection[] }) {
+export function Header({ collections, settings }: { collections: StoreCollection[]; settings: Values }) {
   const headerCollections = collections
     .filter((c) => c.show_in_header)
     .sort((a, b) => a.header_order - b.header_order)
-    .slice(0, 5);
+    .slice(0, settings.menu_limit as number);
   const { count, setOpen } = useCart();
   const { user } = useAuth();
   const [mobile, setMobile] = useState(false);
@@ -42,10 +43,10 @@ export function Header({ collections }: { collections: StoreCollection[] }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-1 xl:ml-0">
-          <button className="flex items-center gap-2 rounded-full p-2.5 text-sm hover:bg-sand xl:border xl:border-line xl:bg-white xl:py-2 xl:pl-4 xl:pr-12 xl:text-ink-soft xl:hover:border-ink" aria-label="Search" onClick={() => setSearch(true)}>
+          {settings.show_search ? <button className="flex items-center gap-2 rounded-full p-2.5 text-sm hover:bg-sand xl:border xl:border-line xl:bg-white xl:py-2 xl:pl-4 xl:pr-12 xl:text-ink-soft xl:hover:border-ink" aria-label="Search" onClick={() => setSearch(true)}>
             <Search className="h-[22px] w-[22px] xl:h-4 xl:w-4" />
             <span className="hidden xl:inline">Search</span>
-          </button>
+          </button> : null}
           <Link href={user ? "/account" : "/login"} className="hidden rounded-full p-2.5 hover:bg-sand sm:block" aria-label={user ? "My account" : "Log in"}>
             <User className="h-[22px] w-[22px]" />
           </Link>

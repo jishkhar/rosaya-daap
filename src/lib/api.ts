@@ -1,15 +1,36 @@
 import "server-only";
+import { headers as requestHeaders } from "next/headers";
 import { cache } from "react";
 
 /**
  * Server-side client for the ERP store API (`/api/v1/store/*`).
  *
- * The channel key authenticates this storefront as the tenant's 'online' channel. It lives only in server env
- * (STORE_CHANNEL_KEY) -- this module is `server-only`, so importing it from a client component fails the build.
+ * Its credentials (see credentials() below) live only in server env -- this module is `server-only`, so importing it from a client
+ * component fails the build.
  * The customer's session token (httpOnly cookie) is forwarded per call as X-Customer-Token.
  */
 const BASE = (process.env.STORE_API_BASE ?? "http://localhost:8000").replace(/\/$/, "");
 const KEY = process.env.STORE_CHANNEL_KEY ?? "";
+const PLATFORM_KEY = process.env.STOREFRONT_PLATFORM_KEY ?? "";
+
+/**
+ * How this storefront proves itself to the store API:
+ *  - one shop: STORE_CHANNEL_KEY (that shop's 'online' key), whatever address the site is opened on;
+ *  - the DAAP-hosted storefront (every shop): STOREFRONT_PLATFORM_KEY + the address the shopper opened (rosaya.ecommerce.daaprimetech.com),
+ *    which the backend turns into the shop. The address is sent as a header, and Next's fetch cache keys on headers, so one shop's cached
+ *    answers are never served to another.
+ */
+async function credentials(): Promise<Record<string, string>> {
+  if (KEY) return { "X-Channel-Key": KEY };
+  if (!PLATFORM_KEY) throw new ApiError(500, "not_configured", "The storefront has no STORE_CHANNEL_KEY or STOREFRONT_PLATFORM_KEY configured.");
+  return { "X-Storefront-Key": PLATFORM_KEY, "X-Store-Host": await storeHost() };
+}
+
+/** The address this request was made to (behind a proxy, the one the shopper typed). */
+export async function storeHost(): Promise<string> {
+  const h = await requestHeaders();
+  return (h.get("x-forwarded-host") ?? h.get("host") ?? "").split(",")[0].trim();
+}
 
 export class ApiError extends Error {
   constructor(
@@ -29,14 +50,16 @@ type Opts = {
   idempotencyKey?: string;
   /** seconds to cache a GET in Next's data cache; omit for no caching */
   revalidate?: number;
+  /** theme preview token from the portal's editor (unpublished draft); never cached */
+  preview?: string;
 };
 
 async function request(path: string, opts: Opts = {}): Promise<unknown> {
-  if (!KEY) throw new ApiError(500, "not_configured", "The storefront has no STORE_CHANNEL_KEY configured.");
-  const headers: Record<string, string> = { "X-Channel-Key": KEY };
+  const headers: Record<string, string> = await credentials();
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
   if (opts.token) headers["X-Customer-Token"] = opts.token;
   if (opts.idempotencyKey) headers["Idempotency-Key"] = opts.idempotencyKey;
+  if (opts.preview) headers["X-Theme-Preview"] = opts.preview;
   const method = opts.method ?? "GET";
   const signal = AbortSignal.timeout(method === "GET" ? 10_000 : 30_000);
   try {
@@ -78,7 +101,7 @@ const read = cache((path: string, revalidate: number | undefined, token: string 
   request(path, { revalidate, token }));
 
 export async function api<T>(path: string, opts: Opts = {}): Promise<T> {
-  return ((opts.method ?? "GET") === "GET"
+  return ((opts.method ?? "GET") === "GET" && !opts.preview
     ? read(path, opts.revalidate, opts.token)
     : request(path, opts)) as Promise<T>;
 }

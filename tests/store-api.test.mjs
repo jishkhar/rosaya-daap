@@ -8,9 +8,10 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 // Exercise the server API client in Node without Next's server-only build marker.
-function loadClient(base, key = 'test-channel-key') {
+function loadClient(base, key = 'test-channel-key', { platformKey = '', host = 'rosaya.localhost:3001' } = {}) {
   process.env.STORE_API_BASE = base;
   process.env.STORE_CHANNEL_KEY = key;
+  process.env.STOREFRONT_PLATFORM_KEY = platformKey;
   const filename = fileURLToPath(new URL('../src/lib/api.ts', import.meta.url));
   const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
@@ -18,7 +19,8 @@ function loadClient(base, key = 'test-channel-key') {
   const unit = new Module(filename);
   unit.paths = Module._nodeModulePaths(path.dirname(filename));
   const requireModule = unit.require.bind(unit);
-  unit.require = (name) => name === 'server-only' ? {} : requireModule(name);
+  const nextHeaders = { headers: async () => new Map([['host', host]]) };   // the request's headers, as next/headers gives them
+  unit.require = (name) => name === 'server-only' ? {} : name === 'next/headers' ? nextHeaders : requireModule(name);
   unit._compile(compiled, filename);
   return unit.exports;
 }
@@ -90,4 +92,17 @@ test('successful requests forward the channel and customer headers', async (t) =
 test('an unconfigured channel fails before a network request', async () => {
   const { api } = loadClient('http://127.0.0.1:1', '');
   await assert.rejects(api('/products'), (e) => e.status === 500 && e.code === 'not_configured');
+});
+
+test('the hosted storefront sends its own key and the visited address, never a shop key', async (t) => {
+  const server = http.createServer((req, res) => {
+    assert.equal(req.headers['x-storefront-key'], 'platform-key');
+    assert.equal(req.headers['x-store-host'], 'asha.localhost:3001');
+    assert.equal(req.headers['x-channel-key'], undefined);
+    res.end(JSON.stringify({ ok: true }));
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const { api } = loadClient(`http://127.0.0.1:${server.address().port}`, '', { platformKey: 'platform-key', host: 'asha.localhost:3001' });
+  assert.deepEqual(await api('/theme'), { ok: true });
 });

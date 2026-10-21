@@ -4,17 +4,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { heroSlides } from "@/content/site";
-
 export type HeroImages = Record<string, string[]>;
+export type HeroSlide = {
+  eyebrow: string; title: string; text: string; cta_label: string; cta_href: string; cta2_label: string; cta2_href: string; collection: string;
+};
 
-export function Hero({ images }: { images: HeroImages }) {
+export function Hero({ slides, badges, images }: { slides: HeroSlide[]; badges: string[]; images: HeroImages }) {
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
-  const n = heroSlides.length;
+  const n = slides.length;
 
   useEffect(() => {
-    if (paused) return;
+    if (paused || n < 2) return;
     const t = setInterval(() => setI((x) => (x + 1) % n), 6500);
     return () => clearInterval(t);
   }, [paused, n]);
@@ -34,12 +35,12 @@ export function Hero({ images }: { images: HeroImages }) {
 
       {/* All slides share one grid cell, so the tallest one sets the height (no layout jump). */}
       <div className="grid">
-        {heroSlides.map((s, idx) => {
+        {slides.map((s, idx) => {
           const imgs = (images[s.collection] ?? []).slice(0, 3);
           const active = idx === i;
           return (
             <div
-              key={s.title}
+              key={idx}
               role="group"
               aria-roledescription="slide"
               aria-label={`${idx + 1} of ${n}`}
@@ -55,12 +56,14 @@ export function Hero({ images }: { images: HeroImages }) {
                   <h1 className="font-heading text-5xl font-medium leading-[1.02] sm:text-6xl lg:text-[5.5rem]">{s.title}</h1>
                   <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-ink-soft md:mx-0">{s.text}</p>
                   <div className="mt-8 flex flex-wrap justify-center gap-3 md:justify-start">
-                    <Link href={s.cta.href} tabIndex={active ? 0 : -1} className="inline-flex h-12 items-center rounded-full bg-ink px-8 text-sm font-medium text-cream shadow-sm transition-colors hover:bg-taupe-dark">{s.cta.label}</Link>
-                    <Link href={s.cta2.href} tabIndex={active ? 0 : -1} className="inline-flex h-12 items-center rounded-full border border-ink px-8 text-sm font-medium transition-colors hover:bg-ink hover:text-cream">{s.cta2.label}</Link>
+                    {s.cta_label && s.cta_href && <Link href={s.cta_href} tabIndex={active ? 0 : -1} className="inline-flex h-12 items-center rounded-full bg-ink px-8 text-sm font-medium text-cream shadow-sm transition-colors hover:bg-taupe-dark">{s.cta_label}</Link>}
+                    {s.cta2_label && s.cta2_href && <Link href={s.cta2_href} tabIndex={active ? 0 : -1} className="inline-flex h-12 items-center rounded-full border border-ink px-8 text-sm font-medium transition-colors hover:bg-ink hover:text-cream">{s.cta2_label}</Link>}
                   </div>
-                  <ul className="mt-9 hidden flex-wrap gap-x-7 gap-y-1 text-xs text-ink-soft md:flex">
-                    <li>✦ Ready to ship</li><li>✦ Free shipping</li><li>✦ Easy exchange</li>
-                  </ul>
+                  {badges.length > 0 && (
+                    <ul className="mt-9 hidden flex-wrap gap-x-7 gap-y-1 text-xs text-ink-soft md:flex">
+                      {badges.map((b) => <li key={b}>✦ {b}</li>)}
+                    </ul>
+                  )}
                 </div>
 
                 {/* Arched image collage */}
@@ -80,13 +83,15 @@ export function Hero({ images }: { images: HeroImages }) {
         })}
       </div>
 
-      <div className="absolute inset-x-0 bottom-4 flex items-center justify-center gap-3">
-        <button aria-label="Previous slide" onClick={() => setI((i - 1 + n) % n)} className="hidden rounded-full p-1.5 hover:bg-cream/70 sm:block"><ChevronLeft className="h-5 w-5" /></button>
-        {heroSlides.map((s, idx) => (
-          <button key={s.title} aria-label={`Go to slide ${idx + 1}`} aria-current={idx === i} onClick={() => setI(idx)} className={`h-2 rounded-full transition-all ${idx === i ? "w-8 bg-ink" : "w-2 bg-ink/30"}`} />
-        ))}
-        <button aria-label="Next slide" onClick={() => setI((i + 1) % n)} className="hidden rounded-full p-1.5 hover:bg-cream/70 sm:block"><ChevronRight className="h-5 w-5" /></button>
-      </div>
+      {n > 1 && (
+        <div className="absolute inset-x-0 bottom-4 flex items-center justify-center gap-3">
+          <button aria-label="Previous slide" onClick={() => setI((i - 1 + n) % n)} className="hidden rounded-full p-1.5 hover:bg-cream/70 sm:block"><ChevronLeft className="h-5 w-5" /></button>
+          {slides.map((s, idx) => (
+            <button key={idx} aria-label={`Go to slide ${idx + 1}`} aria-current={idx === i} onClick={() => setI(idx)} className={`h-2 rounded-full transition-all ${idx === i ? "w-8 bg-ink" : "w-2 bg-ink/30"}`} />
+          ))}
+          <button aria-label="Next slide" onClick={() => setI((i + 1) % n)} className="hidden rounded-full p-1.5 hover:bg-cream/70 sm:block"><ChevronRight className="h-5 w-5" /></button>
+        </div>
+      )}
     </section>
   );
 }

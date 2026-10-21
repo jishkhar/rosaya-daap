@@ -8,7 +8,7 @@ import { Section } from "@/components/home/Section";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Price } from "@/components/ui/Price";
 import { colorHex } from "@/lib/catalog";
-import { site } from "@/lib/site";
+import { siteUrl } from "@/lib/site";
 import { getProduct, related } from "@/lib/store";
 import { descriptionText } from "@/lib/richText";
 
@@ -29,6 +29,7 @@ export default async function ProductPage({ params }: Props) {
   const p = await getProduct((await params).slug);
   if (!p) notFound();
   const more = await related(p);
+  const base = await siteUrl();
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -38,7 +39,7 @@ export default async function ProductPage({ params }: Props) {
     description: descriptionText(p.desc) || p.title,
     sku: p.variants[0]?.id ?? p.id,
     category: p.category,
-    offers: { "@type": "Offer", priceCurrency: "INR", price: p.price, availability: p.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock", url: `${site.url}/p/${p.slug}` },
+    offers: { "@type": "Offer", priceCurrency: "INR", price: p.price, availability: p.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock", url: `${base}/p/${p.slug}` },
   };
 
   return (

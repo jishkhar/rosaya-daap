@@ -1,0 +1,82 @@
+{
+  "settings": {
+    "brand": { "name": "", "tagline": "", "logo": "" },
+    "announcement": {
+      "enabled": false,
+      "messages": [{ "text": "Welcome to our store" }]
+    },
+    "header": { "menu_limit": 5, "show_search": true },
+    "footer": {
+      "tagline": "",
+      "newsletter_title": "Join our newsletter",
+      "newsletter_note": "New arrivals and offers. No spam.",
+      "instagram": "",
+      "facebook": "",
+      "youtube": "",
+      "columns": [
+        {
+          "title": "Shop",
+          "store_collections": false,
+          "links": [
+            { "label": "New Arrivals", "href": "/c/new-arrivals" },
+            { "label": "All products", "href": "/shop" }
+          ]
+        },
+        { "title": "Collections", "store_collections": true, "links": [] },
+        {
+          "title": "Help",
+          "store_collections": false,
+          "links": [
+            { "label": "Shipping & Delivery", "href": "/help/shipping" },
+            { "label": "Returns & Exchange", "href": "/help/returns" },
+            { "label": "Track Your Order", "href": "/account/orders" },
+            { "label": "Contact Us", "href": "/contact" }
+          ]
+        },
+        {
+          "title": "Company",
+          "store_collections": false,
+          "links": [
+            { "label": "About Us", "href": "/about" },
+            { "label": "Privacy Policy", "href": "/privacy" },
+            { "label": "Terms of Service", "href": "/terms" }
+          ]
+        }
+      ],
+      "address": "",
+      "phone": "",
+      "email": "",
+      "copyright": "",
+      "payments": []
+    }
+  },
+  "templates": {
+    "home": [
+      {
+        "id": "hero",
+        "type": "hero",
+        "settings": {
+          "slides": [
+            {
+              "eyebrow": "New season", "title": "Welcome to our store",
+              "text": "Discover our latest arrivals, picked with care for you.",
+              "cta_label": "Shop now", "cta_href": "/shop", "cta2_label": "New Arrivals", "cta2_href": "/c/new-arrivals", "collection": ""
+            }
+          ],
+          "badges": []
+        }
+      },
+      { "id": "featured", "type": "featured-collections", "settings": { "eyebrow": "Curated for you", "title": "Shop our collections", "href": "/collections", "limit": 8 } },
+      { "id": "new", "type": "product-rail", "settings": { "source": "new", "eyebrow": "Just in", "title": "New Arrivals", "href": "/c/new-arrivals", "link_label": "View all" } },
+      { "id": "value", "type": "product-rail", "settings": { "source": "value", "eyebrow": "Offers", "title": "Best Value Picks", "href": "/shop?sort=price-asc", "link_label": "View all" } },
+      {
+        "id": "newsletter", "type": "newsletter",
+        "settings": {
+          "eyebrow": "Stay in touch", "title": "Be the first to know",
+          "text": "New arrivals and offers, straight to your inbox.",
+          "note": "No spam. Unsubscribe anytime.", "image_collections": []
+        }
+      }
+    ]
+  }
+}
