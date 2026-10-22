@@ -4,7 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Check, ChevronDown, Package } from "lucide-react";
-import { addressLine, STATUS_STEPS, stageOf, useRemoteList, type ApiOrder, type OrderStage } from "@/lib/account";
+import {
+  addressLine,
+  STATUS_STEPS,
+  stageOf,
+  useRemoteList,
+  type ApiOrder,
+  type OrderStage,
+} from "@/lib/account";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { call, goTo } from "@/lib/http";
@@ -22,31 +29,67 @@ const badge: Record<OrderStage, string> = {
 
 export default function OrdersPage() {
   const { user } = useAuth();
-  const { items: orders, ready, error } = useRemoteList<ApiOrder>("/api/me/orders", !!user);
+  const {
+    items: orders,
+    ready,
+    error,
+  } = useRemoteList<ApiOrder>("/api/me/orders", !!user);
   const { add } = useCart();
   const [open, setOpen] = useState<string | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
 
-  if (!ready) return <div className="h-64 animate-pulse rounded-2xl bg-sand" aria-label="Loading orders" />;
+  if (!ready)
+    return (
+      <div
+        className="h-64 animate-pulse rounded-2xl bg-sand"
+        aria-label="Loading orders"
+      />
+    );
 
   const payNow = async (o: ApiOrder) => {
     setPayError(null);
-    const r = await call<{ mode: string; url: string | null }>(`/api/orders/${o.id}/pay`, { method: "POST", body: {} });
+    const r = await call<{ mode: string; url: string | null }>(
+      `/api/orders/${o.id}/pay`,
+      { method: "POST", body: {} },
+    );
     if (!r.ok) return setPayError(r.error);
-    goTo(r.data.url ?? (r.data.mode === "mock" ? `/pay/${o.id}` : `/checkout?order=${encodeURIComponent(o.id)}`));
+    goTo(
+      r.data.url ??
+        (r.data.mode === "mock"
+          ? `/pay/${o.id}`
+          : `/checkout?order=${encodeURIComponent(o.id)}`),
+    );
   };
 
   return (
     <div>
       <h1 className="font-heading text-3xl font-medium">Your Orders</h1>
-      {error && <p role="alert" className="mt-4 rounded-xl bg-danger/10 p-3 text-sm text-danger">{error}</p>}
-      {payError && <p role="alert" className="mt-4 rounded-xl bg-danger/10 p-3 text-sm text-danger">{payError}</p>}
+      {error && (
+        <p
+          role="alert"
+          className="mt-4 rounded-xl bg-danger/10 p-3 text-sm text-danger"
+        >
+          {error}
+        </p>
+      )}
+      {payError && (
+        <p
+          role="alert"
+          className="mt-4 rounded-xl bg-danger/10 p-3 text-sm text-danger"
+        >
+          {payError}
+        </p>
+      )}
       {orders.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
           <Package className="h-12 w-12 text-taupe" strokeWidth={1.2} />
           <p className="font-heading text-xl">No orders yet</p>
-          <p className="text-sm text-ink-soft">When you place an order, it will show up here.</p>
-          <ButtonLink href="/shop" size="lg" className="mt-2">Start shopping</ButtonLink>
+          <p className="text-sm text-ink-soft">
+            When you place an order, it will show up here.
+          </p>
+          <ButtonLink href="/shop" size="lg" className="mt-2">
+            Start shopping
+          </ButtonLink>
         </div>
       ) : (
         <ul className="mt-6 space-y-4">
@@ -55,30 +98,79 @@ export default function OrdersPage() {
             const stage = stageOf(o.status);
             const step = STATUS_STEPS.indexOf(stage);
             const count = o.items.reduce((s, i) => s + i.quantity, 0);
-            const unpaid = o.payment_method === "online" && o.payment_status !== "paid" && o.status === "pending";
+            const unpaid =
+              o.payment_method === "online" &&
+              o.payment_status !== "paid" &&
+              o.status === "pending";
             return (
-              <li key={o.id} className="rounded-2xl border border-line bg-white">
-                <button onClick={() => setOpen(isOpen ? null : o.id)} aria-expanded={isOpen} className="flex w-full flex-wrap items-center gap-x-6 gap-y-2 p-5 text-left">
+              <li
+                key={o.id}
+                className="rounded-2xl border border-line bg-white"
+              >
+                <button
+                  onClick={() => setOpen(isOpen ? null : o.id)}
+                  aria-expanded={isOpen}
+                  className="flex w-full flex-wrap items-center gap-x-6 gap-y-2 p-5 text-left"
+                >
                   <span className="min-w-0 flex-1">
-                    <span className="block font-medium">Order #{o.order_number}</span>
-                    <span className="text-sm text-ink-soft">{new Date(o.placed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · {count === 1 ? "1 item" : `${count} items`}</span>
+                    <span className="block font-medium">
+                      Order #{o.order_number}
+                    </span>
+                    <span className="text-sm text-ink-soft">
+                      {new Date(o.placed_at).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}{" "}
+                      · {count === 1 ? "1 item" : `${count} items`}
+                    </span>
                   </span>
-                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${badge[stage]}`}>{unpaid ? "Awaiting payment" : stage}</span>
-                  <span className="font-semibold">{formatINR(o.total_minor / 100)}</span>
-                  <ChevronDown className={`h-5 w-5 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${badge[stage]}`}
+                  >
+                    {unpaid ? "Awaiting payment" : stage}
+                  </span>
+                  <span className="font-semibold">
+                    {formatINR(o.total_minor / 100)}
+                  </span>
+                  <ChevronDown
+                    className={`h-5 w-5 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                  />
                 </button>
 
                 {isOpen && (
                   <div className="space-y-6 border-t border-line p-5">
                     {stage !== "Cancelled" && stage !== "Placed" && (
-                      <ol className="flex items-center" aria-label="Order progress">
+                      <ol
+                        className="flex items-center"
+                        aria-label="Order progress"
+                      >
                         {STATUS_STEPS.map((s, i) => (
-                          <li key={s} className="flex flex-1 items-center last:flex-none">
+                          <li
+                            key={s}
+                            className="flex flex-1 items-center last:flex-none"
+                          >
                             <span className="flex flex-col items-center gap-1.5">
-                              <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${i <= step ? "bg-ink text-cream" : "bg-sand text-ink-soft"}`}>{i <= step ? <Check className="h-4 w-4" /> : i + 1}</span>
-                              <span className={`text-[11px] ${i <= step ? "font-medium" : "text-ink-soft"}`}>{s}</span>
+                              <span
+                                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${i <= step ? "bg-ink text-cream" : "bg-sand text-ink-soft"}`}
+                              >
+                                {i <= step ? (
+                                  <Check className="h-4 w-4" />
+                                ) : (
+                                  i + 1
+                                )}
+                              </span>
+                              <span
+                                className={`text-[11px] ${i <= step ? "font-medium" : "text-ink-soft"}`}
+                              >
+                                {s}
+                              </span>
                             </span>
-                            {i < STATUS_STEPS.length - 1 && <span className={`mx-2 mb-5 h-0.5 flex-1 ${i < step ? "bg-ink" : "bg-line"}`} />}
+                            {i < STATUS_STEPS.length - 1 && (
+                              <span
+                                className={`mx-2 mb-5 h-0.5 flex-1 ${i < step ? "bg-ink" : "bg-line"}`}
+                              />
+                            )}
                           </li>
                         ))}
                       </ol>
@@ -86,25 +178,89 @@ export default function OrdersPage() {
 
                     <ul className="divide-y divide-line">
                       {o.items.map((i) => (
-                        <li key={i.variant_id} className="flex items-center gap-4 py-3">
-                          <Link href={i.slug ? `/p/${i.slug}` : "#"}><Image src={i.image ?? "/placeholder.svg"} alt="" width={56} height={72} className="h-[72px] w-14 rounded-md object-cover" /></Link>
-                          <Link href={i.slug ? `/p/${i.slug}` : "#"} className="line-clamp-2 flex-1 text-sm hover:underline">{i.title}</Link>
-                          <span className="text-sm text-ink-soft">×{i.quantity}</span>
-                          <span className="text-sm font-medium">{formatINR((i.unit_price_minor * i.quantity) / 100)}</span>
+                        <li
+                          key={i.variant_id}
+                          className="flex items-center gap-4 py-3"
+                        >
+                          <Link href={i.slug ? `/p/${i.slug}` : "#"}>
+                            <Image
+                              src={i.image ?? "/placeholder.svg"}
+                              alt=""
+                              width={56}
+                              height={72}
+                              className="h-[72px] w-14 rounded-md object-cover"
+                            />
+                          </Link>
+                          <Link
+                            href={i.slug ? `/p/${i.slug}` : "#"}
+                            className="line-clamp-2 flex-1 text-sm hover:underline"
+                          >
+                            {i.title}
+                          </Link>
+                          <span className="text-sm text-ink-soft">
+                            ×{i.quantity}
+                          </span>
+                          <span className="text-sm font-medium">
+                            {formatINR((i.unit_price_minor * i.quantity) / 100)}
+                          </span>
                         </li>
                       ))}
                     </ul>
 
                     <div className="flex flex-wrap items-end justify-between gap-4 text-sm">
                       <div className="space-y-1 text-ink-soft">
-                        {o.delivery_address && <p><span className="text-ink">Deliver to:</span> {o.delivery_address.name ? `${o.delivery_address.name}, ` : ""}{addressLine(o.delivery_address)}</p>}
-                        <p><span className="text-ink">Payment:</span> {o.payment_method === "cod" ? "Cash on delivery" : o.payment_status === "paid" ? "Paid online" : "Online — not paid yet"}</p>
-                        {o.discount_minor > 0 && <p><span className="text-ink">You saved:</span> {formatINR(o.discount_minor / 100)}</p>}
+                        {o.delivery_address && (
+                          <p>
+                            <span className="text-ink">Deliver to:</span>{" "}
+                            {o.delivery_address.name
+                              ? `${o.delivery_address.name}, `
+                              : ""}
+                            {addressLine(o.delivery_address)}
+                          </p>
+                        )}
+                        <p>
+                          <span className="text-ink">Payment:</span>{" "}
+                          {o.payment_method === "cod"
+                            ? "Cash on delivery"
+                            : o.payment_status === "paid"
+                              ? "Paid online"
+                              : "Online — not paid yet"}
+                        </p>
+                        {o.discount_minor > 0 && (
+                          <p>
+                            <span className="text-ink">You saved:</span>{" "}
+                            {formatINR(o.discount_minor / 100)}
+                          </p>
+                        )}
                       </div>
                       <div className="flex gap-2">
-                        {unpaid && <button onClick={() => payNow(o)} className="h-11 rounded-full bg-ink px-6 font-medium text-cream hover:bg-taupe-dark">Pay now</button>}
+                        {unpaid && (
+                          <button
+                            onClick={() => payNow(o)}
+                            className="h-11 rounded-full bg-ink px-6 font-medium text-cream hover:bg-taupe-dark"
+                          >
+                            Pay now
+                          </button>
+                        )}
                         <button
-                          onClick={() => o.items.forEach((i) => i.slug && add({ variantId: i.variant_id, slug: i.slug, title: i.title, image: i.image ?? "/placeholder.svg", price: i.unit_price_minor / 100, mrp: null, size: i.size ?? undefined }, i.quantity))}
+                          onClick={() =>
+                            o.items.forEach(
+                              (i) =>
+                                i.slug &&
+                                add(
+                                  {
+                                    variantId: i.variant_id,
+                                    slug: i.slug,
+                                    title: i.title,
+                                    image: i.image ?? "/placeholder.svg",
+                                    price: i.unit_price_minor / 100,
+                                    mrp: null,
+                                    size: i.size ?? undefined,
+                                  },
+                                  i.quantity,
+                                ),
+                            )
+                          }
                           className="h-11 rounded-full border border-ink px-6 font-medium hover:bg-ink hover:text-cream"
                         >
                           Reorder

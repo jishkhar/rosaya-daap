@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { call } from "@/lib/http";
 import { useAuth } from "@/lib/auth";
 
@@ -18,16 +26,57 @@ export type CartItem = {
 };
 
 export type QuoteLine = {
-  variant_id: string; slug: string | null; title: string; image?: string | null; size?: string | null;
-  unit_price_minor?: number; mrp_minor?: number | null; quantity: number; max_qty: number; available: boolean;
+  variant_id: string;
+  slug: string | null;
+  title: string;
+  image?: string | null;
+  size?: string | null;
+  unit_price_minor?: number;
+  mrp_minor?: number | null;
+  quantity: number;
+  max_qty: number;
+  available: boolean;
 };
 export type Quote = {
-  loyalty: { balance_points: number; conversion_points: number; conversion_value_minor: number; max_points: number; points: number; amount_minor: number; ok: boolean; reason: string | null };
-  available_coupons: { code: string; name: string; label: string; amount_minor: number | null; min_order_minor: number; applicable: boolean; reason: string | null }[];
+  loyalty: {
+    balance_points: number;
+    conversion_points: number;
+    conversion_value_minor: number;
+    max_points: number;
+    points: number;
+    amount_minor: number;
+    ok: boolean;
+    reason: string | null;
+  };
+  available_coupons: {
+    code: string;
+    name: string;
+    label: string;
+    amount_minor: number | null;
+    min_order_minor: number;
+    applicable: boolean;
+    reason: string | null;
+  }[];
   lines: QuoteLine[];
-  issues: { variant_id: string; kind: "unavailable" | "out_of_stock" | "reduced"; message: string; max_qty?: number }[];
+  issues: {
+    variant_id: string;
+    kind: "unavailable" | "out_of_stock" | "reduced";
+    message: string;
+    max_qty?: number;
+  }[];
   can_checkout: boolean;
-  coupon: ({ ok: true; code: string; label: string; amount_minor: number; free_delivery: boolean } | { ok: false; code: string; reason: string }) | null;
+  coupon:
+    | (
+        | {
+            ok: true;
+            code: string;
+            label: string;
+            amount_minor: number;
+            free_delivery: boolean;
+          }
+        | { ok: false; code: string; reason: string }
+      )
+    | null;
   tax_minor: number;
   tax_inclusive: boolean;
   items_minor: number;
@@ -58,7 +107,9 @@ type Ctx = {
   canCheckout: boolean;
   coupon: Extract<NonNullable<Quote["coupon"]>, { ok: true }> | null;
   couponError: string | null;
-  applyCoupon: (code: string) => Promise<{ ok: true } | { ok: false; reason: string }>;
+  applyCoupon: (
+    code: string,
+  ) => Promise<{ ok: true } | { ok: false; reason: string }>;
   removeCoupon: () => void;
   discount: number;
   shipping: number;
@@ -74,7 +125,10 @@ const CartContext = createContext<Ctx | null>(null);
 const KEY = "store.cart.v2";
 const COUPON_KEY = "store.coupon.v2";
 // Names before the storefront served many shops: a guest bag saved under them moves over once.
-const LEGACY_KEYS: [string, string][] = [["rosaya.cart.v2", KEY], ["rosaya.coupon.v2", COUPON_KEY]];
+const LEGACY_KEYS: [string, string][] = [
+  ["rosaya.cart.v2", KEY],
+  ["rosaya.coupon.v2", COUPON_KEY],
+];
 
 function adoptLegacyStorage() {
   for (const [old, key] of LEGACY_KEYS) {
@@ -105,7 +159,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const ready = authReady && owner === customerId;
   const writeQueue = useRef<Promise<unknown>>(Promise.resolve());
   const activeCustomer = useRef(customerId);
-  useEffect(() => { activeCustomer.current = customerId; }, [customerId]);
+  useEffect(() => {
+    activeCustomer.current = customerId;
+  }, [customerId]);
 
   // Resolve authentication before choosing a storage location. Never copy an account cart to the guest basket.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -125,7 +181,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       try {
         adoptLegacyStorage();
         const parsed = JSON.parse(localStorage.getItem(KEY) || "[]");
-        if (Array.isArray(parsed)) guest = parsed.filter((i) => i && typeof i.variantId === "string" && Number.isInteger(i.qty) && i.qty > 0);
+        if (Array.isArray(parsed))
+          guest = parsed.filter(
+            (i) =>
+              i &&
+              typeof i.variantId === "string" &&
+              Number.isInteger(i.qty) &&
+              i.qty > 0,
+          );
         guestCoupon = localStorage.getItem(COUPON_KEY);
       } catch {}
       let next = guest;
@@ -134,7 +197,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // Wait for previous writes before restoring an account on this browser.
         await writeQueue.current;
         if (cancelled) return;
-        const result = await call<{ items: CartItem[]; coupon_code: string | null }>("/api/basket");
+        const result = await call<{
+          items: CartItem[];
+          coupon_code: string | null;
+        }>("/api/basket");
         if (cancelled) return;
         if (!result.ok) {
           setStorageError("Couldn't load your saved bag. Retrying…");
@@ -145,19 +211,29 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         for (const item of guest) {
           const saved = merged.get(item.variantId);
           // Taking the larger quantity makes retrying a guest import safe.
-          merged.set(item.variantId, { ...item, ...saved, qty: Math.min(MAX_QTY, Math.max(item.qty, saved?.qty ?? 0)) });
+          merged.set(item.variantId, {
+            ...item,
+            ...saved,
+            qty: Math.min(MAX_QTY, Math.max(item.qty, saved?.qty ?? 0)),
+          });
         }
         next = [...merged.values()];
         code = guestCoupon || result.data.coupon_code;
         if (guest.length || guestCoupon) {
-          const saved = await call("/api/basket", { method: "PUT", body: payloadOf(next, code) });
+          const saved = await call("/api/basket", {
+            method: "PUT",
+            body: payloadOf(next, code),
+          });
           if (cancelled) return;
           if (!saved.ok) {
             setStorageError("Couldn't save your bag. Retrying…");
             retry = setTimeout(hydrate, 3000);
             return;
           }
-          try { localStorage.removeItem(KEY); localStorage.removeItem(COUPON_KEY); } catch {}
+          try {
+            localStorage.removeItem(KEY);
+            localStorage.removeItem(COUPON_KEY);
+          } catch {}
         }
       }
       if (cancelled) return;
@@ -167,7 +243,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setOwner(customerId);
     };
     void hydrate();
-    return () => { cancelled = true; clearTimeout(retry); };
+    return () => {
+      cancelled = true;
+      clearTimeout(retry);
+    };
   }, [authReady, customerId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -195,11 +274,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
     };
     persist();
-    return () => { cancelled = true; clearTimeout(retry); };
+    return () => {
+      cancelled = true;
+      clearTimeout(retry);
+    };
   }, [items, couponCode, ready, customerId]);
 
   // The server is the source of truth for prices, stock and discounts: re-quote whenever the basket or code changes.
-  const sig = JSON.stringify({ ...payloadOf(items, couponCode), loyalty_points: loyaltyPoints });
+  const sig = JSON.stringify({
+    ...payloadOf(items, couponCode),
+    loyalty_points: loyaltyPoints,
+  });
   const latest = useRef(items);
   useEffect(() => {
     latest.current = items;
@@ -215,10 +300,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const ctrl = new AbortController();
     setQuoting(true);
     const t = setTimeout(async () => {
-      const r = await call<Quote>("/api/basket/quote", { method: "POST", body: JSON.parse(sig), signal: ctrl.signal });
+      const r = await call<Quote>("/api/basket/quote", {
+        method: "POST",
+        body: JSON.parse(sig),
+        signal: ctrl.signal,
+      });
       if (ctrl.signal.aborted) return;
       if (!r.ok) {
-        if (r.code !== "aborted") { setQuote(null); setQuoting(false); }
+        if (r.code !== "aborted") {
+          setQuote(null);
+          setQuoting(false);
+        }
         return;
       }
       setQuote(r.data);
@@ -230,8 +322,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           const l = byId.get(i.variantId);
           if (!l || !l.available || l.unit_price_minor == null) return i;
           return {
-            ...i, title: l.title, image: l.image ?? i.image, price: l.unit_price_minor / 100,
-            mrp: l.mrp_minor && l.mrp_minor > l.unit_price_minor ? l.mrp_minor / 100 : null,
+            ...i,
+            title: l.title,
+            image: l.image ?? i.image,
+            price: l.unit_price_minor / 100,
+            mrp:
+              l.mrp_minor && l.mrp_minor > l.unit_price_minor
+                ? l.mrp_minor / 100
+                : null,
             qty: Math.max(1, Math.min(i.qty, l.max_qty || i.qty)),
           };
         });
@@ -247,23 +345,38 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [sig, ready, authReady, customerId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const add: Ctx["add"] = useCallback((item, qty = 1) => {
-    if (!ready) return;
-    const key = item.variantId;
-    setItems((prev) => {
-      const hit = prev.find((i) => i.key === key);
-      if (hit) return prev.map((i) => (i.key === key ? { ...i, qty: Math.min(MAX_QTY, i.qty + qty) } : i));
-      return [...prev, { ...item, key, qty: Math.min(MAX_QTY, qty) }];
-    });
-    setOpen(true);
-  }, [ready]);
+  const add: Ctx["add"] = useCallback(
+    (item, qty = 1) => {
+      if (!ready) return;
+      const key = item.variantId;
+      setItems((prev) => {
+        const hit = prev.find((i) => i.key === key);
+        if (hit)
+          return prev.map((i) =>
+            i.key === key ? { ...i, qty: Math.min(MAX_QTY, i.qty + qty) } : i,
+          );
+        return [...prev, { ...item, key, qty: Math.min(MAX_QTY, qty) }];
+      });
+      setOpen(true);
+    },
+    [ready],
+  );
 
   const setQty = useCallback(
     (key: string, qty: number) =>
-      setItems((prev) => (qty <= 0 ? prev.filter((i) => i.key !== key) : prev.map((i) => (i.key === key ? { ...i, qty: Math.min(MAX_QTY, qty) } : i)))),
+      setItems((prev) =>
+        qty <= 0
+          ? prev.filter((i) => i.key !== key)
+          : prev.map((i) =>
+              i.key === key ? { ...i, qty: Math.min(MAX_QTY, qty) } : i,
+            ),
+      ),
     [],
   );
-  const remove = useCallback((key: string) => setItems((p) => p.filter((i) => i.key !== key)), []);
+  const remove = useCallback(
+    (key: string) => setItems((p) => p.filter((i) => i.key !== key)),
+    [],
+  );
   const clear = useCallback(() => {
     setItems([]);
     setCouponCode(null);
@@ -271,18 +384,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setQuote(null);
   }, []);
 
-  const applyCoupon: Ctx["applyCoupon"] = useCallback(async (code) => {
-    const c = code.trim();
-    if (!c) return { ok: false, reason: "Enter a coupon code." };
-    const r = await call<Quote>("/api/basket/quote", { method: "POST", body: { ...payloadOf(latest.current, c), loyalty_points: loyaltyPoints } });
-    if (!r.ok) return { ok: false, reason: r.error };
-    if (r.data.coupon?.ok) {
-      setQuote(r.data);
-      setCouponCode(r.data.coupon.code);
-      return { ok: true };
-    }
-    return { ok: false, reason: r.data.coupon && !r.data.coupon.ok ? r.data.coupon.reason : "This code isn't valid or has expired." };
-  }, [loyaltyPoints]);
+  const applyCoupon: Ctx["applyCoupon"] = useCallback(
+    async (code) => {
+      const c = code.trim();
+      if (!c) return { ok: false, reason: "Enter a coupon code." };
+      const r = await call<Quote>("/api/basket/quote", {
+        method: "POST",
+        body: {
+          ...payloadOf(latest.current, c),
+          loyalty_points: loyaltyPoints,
+        },
+      });
+      if (!r.ok) return { ok: false, reason: r.error };
+      if (r.data.coupon?.ok) {
+        setQuote(r.data);
+        setCouponCode(r.data.coupon.code);
+        return { ok: true };
+      }
+      return {
+        ok: false,
+        reason:
+          r.data.coupon && !r.data.coupon.ok
+            ? r.data.coupon.reason
+            : "This code isn't valid or has expired.",
+      };
+    },
+    [loyaltyPoints],
+  );
 
   const value = useMemo<Ctx>(() => {
     const local = items.reduce((s, i) => s + i.price * i.qty, 0);
@@ -291,20 +419,60 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const discount = quote ? quote.coupon_discount_minor / 100 : 0;
     const shipping = quote ? quote.shipping_minor / 100 : 0;
     const total = quote ? quote.grand_total_minor / 100 : local;
-    const above = quote?.free_shipping_above_minor != null ? quote.free_shipping_above_minor / 100 : null;
+    const above =
+      quote?.free_shipping_above_minor != null
+        ? quote.free_shipping_above_minor / 100
+        : null;
     return {
-      items, count: items.reduce((s, i) => s + i.qty, 0), subtotal, ready, storageError, open, setOpen, add, setQty, remove, clear,
-      loyaltyPoints, setLoyaltyPoints,
-      quote, quoting, issues: quote?.issues ?? [], canCheckout: ready && !!quote?.can_checkout && !quoting && (quote?.loyalty?.points ?? 0) === loyaltyPoints,
-      coupon, couponError: quote?.coupon && !quote.coupon.ok ? quote.coupon.reason : null, applyCoupon,
+      items,
+      count: items.reduce((s, i) => s + i.qty, 0),
+      subtotal,
+      ready,
+      storageError,
+      open,
+      setOpen,
+      add,
+      setQty,
+      remove,
+      clear,
+      loyaltyPoints,
+      setLoyaltyPoints,
+      quote,
+      quoting,
+      issues: quote?.issues ?? [],
+      canCheckout:
+        ready &&
+        !!quote?.can_checkout &&
+        !quoting &&
+        (quote?.loyalty?.points ?? 0) === loyaltyPoints,
+      coupon,
+      couponError:
+        quote?.coupon && !quote.coupon.ok ? quote.coupon.reason : null,
+      applyCoupon,
       removeCoupon: () => setCouponCode(null),
-      discount, shipping, total,
+      discount,
+      shipping,
+      total,
       tax: quote && !quote.tax_inclusive ? quote.tax_minor / 100 : 0,
       gstIncluded: quote?.tax_inclusive ? quote.tax_minor / 100 : 0,
       freeShippingAbove: above,
-      toFreeShipping: above == null ? 0 : Math.max(0, above - (subtotal - discount)),
+      toFreeShipping:
+        above == null ? 0 : Math.max(0, above - (subtotal - discount)),
     };
-  }, [items, quote, quoting, ready, storageError, open, add, setQty, remove, clear, applyCoupon, loyaltyPoints]);
+  }, [
+    items,
+    quote,
+    quoting,
+    ready,
+    storageError,
+    open,
+    add,
+    setQty,
+    remove,
+    clear,
+    applyCoupon,
+    loyaltyPoints,
+  ]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

@@ -1,19 +1,39 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { call } from "@/lib/http";
 
 export type User = {
-  id: string; name: string; email: string; phone: string | null;
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
   segment: "new" | "regular" | "vip" | "inactive";
-  loyalty: { points: number; vip_min_points: number; points_per_100: number; points_to_vip: number; spend_to_vip_minor: number | null };
+  loyalty: {
+    points: number;
+    vip_min_points: number;
+    points_per_100: number;
+    points_to_vip: number;
+    spend_to_vip_minor: number | null;
+  };
 };
 type Result = { ok: true } | { ok: false; error: string };
 type Ctx = {
   user: User | null;
   ready: boolean;
   login: (email: string, password: string) => Promise<Result>;
-  register: (v: { name: string; email: string; password: string; phone?: string }) => Promise<Result>;
+  register: (v: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+  }) => Promise<Result>;
   logout: () => Promise<void>;
   updateProfile: (v: { name?: string; phone?: string }) => Promise<Result>;
   refreshUser: () => Promise<void>;
@@ -26,26 +46,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
 
-   
   useEffect(() => {
     call<{ customer: User | null }>("/api/me")
       .then((r) => setUser(r.ok ? r.data.customer : null))
       .finally(() => setReady(true));
   }, []);
-   
 
-  const enter = useCallback(async (path: string, body: unknown): Promise<Result> => {
-    const r = await call<{ customer: User }>(path, { method: "POST", body });
-    if (!r.ok) return { ok: false, error: r.error };
-    setUser(r.data.customer);
-    return { ok: true };
-  }, []);
+  const enter = useCallback(
+    async (path: string, body: unknown): Promise<Result> => {
+      const r = await call<{ customer: User }>(path, { method: "POST", body });
+      if (!r.ok) return { ok: false, error: r.error };
+      setUser(r.data.customer);
+      return { ok: true };
+    },
+    [],
+  );
 
   const refreshUser = useCallback(async () => {
     const r = await call<{ customer: User | null }>("/api/me");
     if (r.ok && r.data.customer) {
       const customer = r.data.customer;
-      setUser((current) => current?.id === customer.id ? customer : current);
+      setUser((current) => (current?.id === customer.id ? customer : current));
     }
   }, []);
 

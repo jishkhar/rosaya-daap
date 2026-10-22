@@ -9,7 +9,10 @@ import { cache } from "react";
  * component fails the build.
  * The customer's session token (httpOnly cookie) is forwarded per call as X-Customer-Token.
  */
-const BASE = (process.env.STORE_API_BASE ?? "http://localhost:8000").replace(/\/$/, "");
+const BASE = (process.env.STORE_API_BASE ?? "http://localhost:8000").replace(
+  /\/$/,
+  "",
+);
 const KEY = process.env.STORE_CHANNEL_KEY ?? "";
 const PLATFORM_KEY = process.env.STOREFRONT_PLATFORM_KEY ?? "";
 
@@ -22,14 +25,24 @@ const PLATFORM_KEY = process.env.STOREFRONT_PLATFORM_KEY ?? "";
  */
 async function credentials(): Promise<Record<string, string>> {
   if (KEY) return { "X-Channel-Key": KEY };
-  if (!PLATFORM_KEY) throw new ApiError(500, "not_configured", "The storefront has no STORE_CHANNEL_KEY or STOREFRONT_PLATFORM_KEY configured.");
-  return { "X-Storefront-Key": PLATFORM_KEY, "X-Store-Host": await storeHost() };
+  if (!PLATFORM_KEY)
+    throw new ApiError(
+      500,
+      "not_configured",
+      "The storefront has no STORE_CHANNEL_KEY or STOREFRONT_PLATFORM_KEY configured.",
+    );
+  return {
+    "X-Storefront-Key": PLATFORM_KEY,
+    "X-Store-Host": await storeHost(),
+  };
 }
 
 /** The address this request was made to (behind a proxy, the one the shopper typed). */
 export async function storeHost(): Promise<string> {
   const h = await requestHeaders();
-  return (h.get("x-forwarded-host") ?? h.get("host") ?? "").split(",")[0].trim();
+  return (h.get("x-forwarded-host") ?? h.get("host") ?? "")
+    .split(",")[0]
+    .trim();
 }
 
 export class ApiError extends Error {
@@ -68,7 +81,9 @@ async function request(path: string, opts: Opts = {}): Promise<unknown> {
       headers,
       signal,
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-      ...(opts.revalidate ? { next: { revalidate: opts.revalidate } } : { cache: "no-store" as const }),
+      ...(opts.revalidate
+        ? { next: { revalidate: opts.revalidate } }
+        : { cache: "no-store" as const }),
     });
     if (res.status === 204) return undefined;
     // The same deadline covers reading the body, not just receiving response headers.
@@ -77,31 +92,58 @@ async function request(path: string, opts: Opts = {}): Promise<unknown> {
       data = await res.json();
     } catch (error) {
       if (signal.aborted) throw error;
-      throw new ApiError(502, "invalid_response", "The store returned an invalid response. Please try again.");
+      throw new ApiError(
+        502,
+        "invalid_response",
+        "The store returned an invalid response. Please try again.",
+      );
     }
     if (!res.ok) {
       const e = data?.error ?? {};
-      throw new ApiError(res.status, e.code ?? "error", e.message ?? "Something went wrong.", e.details ?? {});
+      throw new ApiError(
+        res.status,
+        e.code ?? "error",
+        e.message ?? "Something went wrong.",
+        e.details ?? {},
+      );
     }
     return data;
   } catch (error) {
     if (error instanceof ApiError) throw error;
     if (signal.aborted) {
       console.error("Store API timeout", { method, path: path.split("?")[0] });
-      throw new ApiError(504, "timeout", "The store took too long to respond. Please try again in a moment.");
+      throw new ApiError(
+        504,
+        "timeout",
+        "The store took too long to respond. Please try again in a moment.",
+      );
     }
-    console.error("Store API connection failed", { method, path: path.split("?")[0] });
-    throw new ApiError(503, "unreachable", "The store is temporarily unavailable. Please try again in a moment.");
+    console.error("Store API connection failed", {
+      method,
+      path: path.split("?")[0],
+    });
+    throw new ApiError(
+      503,
+      "unreachable",
+      "The store is temporarily unavailable. Please try again in a moment.",
+    );
   }
 }
 
 // Passing a deadline signal disables Next's automatic fetch memoization. Keep GET
 // deduplication within each server render, with customer tokens in the cache key.
-const read = cache((path: string, revalidate: number | undefined, token: string | null | undefined) =>
-  request(path, { revalidate, token }));
+const read = cache(
+  (
+    path: string,
+    revalidate: number | undefined,
+    token: string | null | undefined,
+  ) => request(path, { revalidate, token }),
+);
 
 export async function api<T>(path: string, opts: Opts = {}): Promise<T> {
-  return ((opts.method ?? "GET") === "GET" && !opts.preview
-    ? read(path, opts.revalidate, opts.token)
-    : request(path, opts)) as Promise<T>;
+  return (
+    (opts.method ?? "GET") === "GET" && !opts.preview
+      ? read(path, opts.revalidate, opts.token)
+      : request(path, opts)
+  ) as Promise<T>;
 }

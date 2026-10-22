@@ -23,4 +23,8 @@ export const GET = route(async ({ token }) => {
     throw e;
   }
 });
-export const PATCH = route(({ token, body }) => guard(() => api("/me", { method: "PATCH", body, token })), { write: true });
+export const PATCH = route(
+  ({ token, body }) =>
+    guard(() => api("/me", { method: "PATCH", body, token })),
+  { write: true },
+);

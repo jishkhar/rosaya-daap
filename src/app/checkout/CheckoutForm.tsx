@@ -4,7 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, CreditCard, Lock, MapPin, ShoppingBag, Truck, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  CreditCard,
+  Lock,
+  MapPin,
+  ShoppingBag,
+  Truck,
+  X,
+} from "lucide-react";
 import { CouponBox } from "@/components/cart/CouponBox";
 import { Totals } from "@/components/cart/Totals";
 import { OrderConfirmationModal } from "@/components/checkout/OrderConfirmationModal";
@@ -16,49 +25,115 @@ import { useCart } from "@/lib/cart";
 import { call, goTo } from "@/lib/http";
 import { formatINR } from "@/lib/money";
 
-type Address = { name: string; line1: string; line2: string; pincode: string; city: string; state: string };
+type Address = {
+  name: string;
+  line1: string;
+  line2: string;
+  pincode: string;
+  city: string;
+  state: string;
+};
 
 const Err = ({ errors, k }: { errors: Record<string, string>; k: string }) =>
-  errors[k] ? <p role="alert" className="mt-1 text-xs text-danger">{errors[k]}</p> : null;
+  errors[k] ? (
+    <p role="alert" className="mt-1 text-xs text-danger">
+      {errors[k]}
+    </p>
+  ) : null;
 
-function Card({ n, title, step, setStep, addr, children }: {
-  n: number; title: string; step: number; setStep: (n: number) => void; addr: Address; children: React.ReactNode;
+function Card({
+  n,
+  title,
+  step,
+  setStep,
+  addr,
+  children,
+}: {
+  n: number;
+  title: string;
+  step: number;
+  setStep: (n: number) => void;
+  addr: Address;
+  children: React.ReactNode;
 }) {
   return (
-    <section className={`rounded-2xl border border-line bg-white p-5 shadow-[0_8px_30px_-24px_rgba(45,28,25,0.3)] sm:p-6 ${step === n ? "" : "bg-white/80"}`}>
+    <section
+      className={`rounded-2xl border border-line bg-white p-5 shadow-[0_8px_30px_-24px_rgba(45,28,25,0.3)] sm:p-6 ${step === n ? "" : "bg-white/80"}`}
+    >
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-3 font-heading text-xl">
-          <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${step > n ? "bg-success text-white" : step === n ? "bg-[#43262b] text-cream" : "bg-sand text-ink-soft"}`}>{step > n ? <Check className="h-4 w-4" /> : n + 1}</span>
+          <span
+            className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${step > n ? "bg-success text-white" : step === n ? "bg-[#43262b] text-cream" : "bg-sand text-ink-soft"}`}
+          >
+            {step > n ? <Check className="h-4 w-4" /> : n + 1}
+          </span>
           {title}
         </h2>
-        {step > n && <button onClick={() => setStep(n)} className="text-sm underline underline-offset-4">Edit</button>}
+        {step > n && (
+          <button
+            onClick={() => setStep(n)}
+            className="text-sm underline underline-offset-4"
+          >
+            Edit
+          </button>
+        )}
       </div>
       {step === n && <div className="mt-5">{children}</div>}
-      {step > n && n === 0 && <p className="mt-2 pl-10 text-sm text-ink-soft">{addr.name}, {addr.line1}{addr.line2 && `, ${addr.line2}`}, {addr.city}, {addr.state} {addr.pincode}</p>}
+      {step > n && n === 0 && (
+        <p className="mt-2 pl-10 text-sm text-ink-soft">
+          {addr.name}, {addr.line1}
+          {addr.line2 && `, ${addr.line2}`}, {addr.city}, {addr.state}{" "}
+          {addr.pincode}
+        </p>
+      )}
     </section>
   );
 }
 
-const field = "h-11 w-full min-w-0 rounded-lg border border-line bg-[#fcfaf7] px-3 text-sm outline-none transition focus:border-[#75414b] focus:bg-white focus:ring-2 focus:ring-[#75414b]/10";
+const field =
+  "h-11 w-full min-w-0 rounded-lg border border-line bg-[#fcfaf7] px-3 text-sm outline-none transition focus:border-[#75414b] focus:bg-white focus:ring-2 focus:ring-[#75414b]/10";
 
-type Placed = { order: { id: string }; payment: { mode: "cod" | "gateway" | "mock" | null; url: string | null } };
+type Placed = {
+  order: { id: string };
+  payment: { mode: "cod" | "gateway" | "mock" | null; url: string | null };
+};
 
-export default function CheckoutForm({ confirmationOrderId, initialUser, initialAddresses }: {
+export default function CheckoutForm({
+  confirmationOrderId,
+  initialUser,
+  initialAddresses,
+}: {
   confirmationOrderId?: string;
   initialUser: User;
   initialAddresses: SavedAddress[];
 }) {
-  const { items, ready, total, clear, quote, canCheckout, quoting, issues, loyaltyPoints } = useCart();
+  const {
+    items,
+    ready,
+    total,
+    clear,
+    quote,
+    canCheckout,
+    quoting,
+    issues,
+    loyaltyPoints,
+  } = useCart();
   const router = useRouter();
   const { user: sessionUser, ready: authReady, refreshUser } = useAuth();
   const user = authReady ? sessionUser : initialUser;
   const [step, setStep] = useState(0);
   const [typedPhone, setTypedPhone] = useState<string | null>(null);
   const saved = user?.id === initialUser.id ? initialAddresses : [];
-  const defaultAddress = saved.find((address) => address.is_default) ?? saved[0];
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
-  const selectedAddress = saved.find((address) => address.id === selectedAddressId) ?? defaultAddress;
-  const phone = typedPhone ?? (selectedAddress?.phone || user?.phone || "").replace(/^\+91/, "");
+  const defaultAddress =
+    saved.find((address) => address.is_default) ?? saved[0];
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    null,
+  );
+  const selectedAddress =
+    saved.find((address) => address.id === selectedAddressId) ?? defaultAddress;
+  const phone =
+    typedPhone ??
+    (selectedAddress?.phone || user?.phone || "").replace(/^\+91/, "");
   const setContactPhone = (v: string) => setTypedPhone(v);
   const [typed, setTyped] = useState<Partial<Address>>({});
   // Derive defaults as saved data arrives; only fields edited by the shopper override them.
@@ -71,7 +146,8 @@ export default function CheckoutForm({ confirmationOrderId, initialUser, initial
     state: selectedAddress?.state ?? "",
     ...typed,
   };
-  const setAddr = (patch: Partial<Address>) => setTyped((current) => ({ ...current, ...patch }));
+  const setAddr = (patch: Partial<Address>) =>
+    setTyped((current) => ({ ...current, ...patch }));
   const [pay, setPay] = useState<"online" | "cod">("online");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [placing, setPlacing] = useState(false);
@@ -80,7 +156,9 @@ export default function CheckoutForm({ confirmationOrderId, initialUser, initial
   const [placed, setPlaced] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
   const confirmationId = completedOrderId ?? confirmationOrderId;
-  const loginUrl = confirmationId ? `/login?next=${encodeURIComponent(`/checkout?order=${encodeURIComponent(confirmationId)}`)}` : "/login?next=/checkout";
+  const loginUrl = confirmationId
+    ? `/login?next=${encodeURIComponent(`/checkout?order=${encodeURIComponent(confirmationId)}`)}`
+    : "/login?next=/checkout";
   const [placeError, setPlaceError] = useState<string | null>(null);
   const attempt = useRef<{ sig: string; key: string } | null>(null);
 
@@ -90,15 +168,21 @@ export default function CheckoutForm({ confirmationOrderId, initialUser, initial
 
   const validate = async () => {
     const e: Record<string, string> = {};
-    if (!/^[6-9]\d{9}$/.test(phone)) e.phone = "Enter a valid 10-digit mobile number.";
-    if (addr.name.trim().length < 2) e.name = "Enter the recipient's full name.";
+    if (!/^[6-9]\d{9}$/.test(phone))
+      e.phone = "Enter a valid 10-digit mobile number.";
+    if (addr.name.trim().length < 2)
+      e.name = "Enter the recipient's full name.";
     if (addr.line1.trim().length < 5) e.line1 = "Enter your address.";
-    if (!/^[1-9]\d{5}$/.test(addr.pincode)) e.pincode = "Enter a valid 6-digit pincode.";
+    if (!/^[1-9]\d{5}$/.test(addr.pincode))
+      e.pincode = "Enter a valid 6-digit pincode.";
     if (!addr.city.trim()) e.city = "Enter your city.";
     if (!addr.state.trim()) e.state = "Enter your state.";
     if (!Object.keys(e).length) {
-      const r = await call<{ serviceable: boolean }>(`/api/serviceability/${addr.pincode}`);
-      if (r.ok && !r.data.serviceable) e.pincode = "Sorry, we don't deliver to this pincode yet.";
+      const r = await call<{ serviceable: boolean }>(
+        `/api/serviceability/${addr.pincode}`,
+      );
+      if (r.ok && !r.data.serviceable)
+        e.pincode = "Sorry, we don't deliver to this pincode yet.";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -144,21 +228,36 @@ export default function CheckoutForm({ confirmationOrderId, initialUser, initial
       coupon_code: quote?.coupon?.ok ? quote.coupon.code : null,
       loyalty_points: loyaltyPoints,
       contact: { name: addr.name.trim(), email: user.email?.trim() || null },
-      address: { name: addr.name.trim(), phone, line1: addr.line1.trim(), line2: addr.line2.trim() || null, city: addr.city.trim(), state: addr.state.trim(), pincode: addr.pincode },
+      address: {
+        name: addr.name.trim(),
+        phone,
+        line1: addr.line1.trim(),
+        line2: addr.line2.trim() || null,
+        city: addr.city.trim(),
+        state: addr.state.trim(),
+        pincode: addr.pincode,
+      },
       payment_method: pay,
       expected_total_minor: quote?.grand_total_minor,
     };
     // One Idempotency-Key per distinct order attempt: a double click or a retry after a timeout replays the same order.
     const sig = JSON.stringify(body);
-    if (attempt.current?.sig !== sig) attempt.current = { sig, key: crypto.randomUUID() };
-    const r = await call<Placed>("/api/checkout", { method: "POST", body, headers: { "Idempotency-Key": attempt.current.key } });
+    if (attempt.current?.sig !== sig)
+      attempt.current = { sig, key: crypto.randomUUID() };
+    const r = await call<Placed>("/api/checkout", {
+      method: "POST",
+      body,
+      headers: { "Idempotency-Key": attempt.current.key },
+    });
     if (!r.ok) {
       setPlacing(false);
       if (r.status === 401) {
         router.replace("/login?next=/checkout");
         return;
       }
-      setPlaceError(r.status === 409 ? `${r.error} Please review your bag.` : r.error);
+      setPlaceError(
+        r.status === 409 ? `${r.error} Please review your bag.` : r.error,
+      );
       return;
     }
     const { order, payment } = r.data;
@@ -170,18 +269,29 @@ export default function CheckoutForm({ confirmationOrderId, initialUser, initial
     else {
       paymentDialog.current?.close();
       setCompletedOrderId(order.id);
-      router.replace(`/checkout?order=${encodeURIComponent(order.id)}`, { scroll: false });
+      router.replace(`/checkout?order=${encodeURIComponent(order.id)}`, {
+        scroll: false,
+      });
     }
   };
 
   if (!user)
-    return <p role="status" className="px-4 py-24 text-center text-ink-soft">Checking your session…</p>;
+    return (
+      <p role="status" className="px-4 py-24 text-center text-ink-soft">
+        Checking your session…
+      </p>
+    );
 
   if (ready && items.length === 0 && !placing && !placed && !confirmationId)
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
         <p className="font-heading text-2xl">Nothing to check out yet</p>
-        <Link href="/shop" className="mt-6 inline-flex h-12 items-center rounded-full bg-ink px-8 text-sm font-medium text-cream">Browse the collection</Link>
+        <Link
+          href="/shop"
+          className="mt-6 inline-flex h-12 items-center rounded-full bg-ink px-8 text-sm font-medium text-cream"
+        >
+          Browse the collection
+        </Link>
       </div>
     );
 
@@ -190,23 +300,70 @@ export default function CheckoutForm({ confirmationOrderId, initialUser, initial
       <header className="border-b border-line bg-white/80">
         <div className="mx-auto flex max-w-[1160px] items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <Logo />
-          <p className="flex items-center gap-1.5 text-[11px] text-ink-soft"><Lock className="h-3.5 w-3.5" /> Secure checkout</p>
+          <p className="flex items-center gap-1.5 text-[11px] text-ink-soft">
+            <Lock className="h-3.5 w-3.5" /> Secure checkout
+          </p>
         </div>
       </header>
       <div className="mx-auto max-w-[1160px] px-4 py-5 sm:px-6 sm:py-7">
-        <Link href="/cart" prefetch={true} className="mb-4 inline-flex items-center gap-1.5 text-xs text-ink-soft hover:text-ink"><ArrowLeft className="h-3.5 w-3.5" /> Back to bag</Link>
+        <Link
+          href="/cart"
+          prefetch={true}
+          className="mb-4 inline-flex items-center gap-1.5 text-xs text-ink-soft hover:text-ink"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to bag
+        </Link>
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-          <div><p className="mb-1 text-[10px] font-medium uppercase tracking-[0.2em] text-[#885663]">The final details</p><h1 className="font-heading text-3xl sm:text-4xl">Checkout</h1><p className="mt-1 text-xs text-ink-soft">Your next favourites are almost yours.</p></div>
-          <ol aria-label="Checkout progress" className="flex items-center gap-3 text-xs">
-            <li aria-current={step === 0 ? "step" : undefined} className="flex items-center gap-1.5 font-medium text-[#43262b]"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#43262b] text-white">{step > 0 ? <Check className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}</span> Delivery</li>
+          <div>
+            <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.2em] text-[#885663]">
+              The final details
+            </p>
+            <h1 className="font-heading text-3xl sm:text-4xl">Checkout</h1>
+            <p className="mt-1 text-xs text-ink-soft">
+              Your next favourites are almost yours.
+            </p>
+          </div>
+          <ol
+            aria-label="Checkout progress"
+            className="flex items-center gap-3 text-xs"
+          >
+            <li
+              aria-current={step === 0 ? "step" : undefined}
+              className="flex items-center gap-1.5 font-medium text-[#43262b]"
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#43262b] text-white">
+                {step > 0 ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <MapPin className="h-3 w-3" />
+                )}
+              </span>{" "}
+              Delivery
+            </li>
             <li aria-hidden="true" className="h-px w-8 bg-[#c9b3ab]" />
-            <li aria-current={step > 0 ? "step" : undefined} className={`flex items-center gap-1.5 ${step > 0 ? "font-medium text-[#43262b]" : "text-ink-soft"}`}><span className={`flex h-6 w-6 items-center justify-center rounded-full ${step > 0 ? "bg-[#43262b] text-white" : "border border-line bg-white"}`}><CreditCard className="h-3 w-3" /></span> Payment</li>
+            <li
+              aria-current={step > 0 ? "step" : undefined}
+              className={`flex items-center gap-1.5 ${step > 0 ? "font-medium text-[#43262b]" : "text-ink-soft"}`}
+            >
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-full ${step > 0 ? "bg-[#43262b] text-white" : "border border-line bg-white"}`}
+              >
+                <CreditCard className="h-3 w-3" />
+              </span>{" "}
+              Payment
+            </li>
           </ol>
         </div>
 
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_390px] lg:gap-7">
           <div className="min-w-0 space-y-4">
-            <Card step={step} setStep={setStep} addr={addr} n={0} title="Shipping address">
+            <Card
+              step={step}
+              setStep={setStep}
+              addr={addr}
+              n={0}
+              title="Shipping address"
+            >
               {saved.length > 0 && (
                 <div className="mb-5 rounded-xl bg-[#f7f3ed] p-3">
                   <p className="mb-2 text-sm font-medium">Saved addresses</p>
@@ -227,13 +384,42 @@ export default function CheckoutForm({ confirmationOrderId, initialUser, initial
                             aria-pressed={selected}
                             className={`flex h-full w-full items-start gap-2 rounded-lg border p-3 text-left text-xs transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#75414b] ${selected ? "border-[#75414b] bg-white text-[#43262b] shadow-sm" : "border-line bg-white/60 hover:border-[#75414b]"}`}
                           >
-                            <span aria-hidden="true" className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[#75414b] bg-[#43262b] text-white" : "border-line"}`}>{selected && <Check className="h-3 w-3" />}</span>
+                            <span
+                              aria-hidden="true"
+                              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[#75414b] bg-[#43262b] text-white" : "border-line"}`}
+                            >
+                              {selected && <Check className="h-3 w-3" />}
+                            </span>
                             <span className="min-w-0">
-                              <span className="block font-medium">{address.label || "Saved"} · {address.line1.slice(0, 22)}{address.line1.length > 22 ? "…" : ""}</span>
-                              <span className="mt-1 block break-words text-ink-soft">{address.name || user?.name}</span>
-                              <span className="mt-1 block break-words text-ink-soft">{[address.line1, address.line2, address.city, address.state, address.pincode].filter(Boolean).join(", ")}</span>
-                              {address.phone && <span className="mt-1 block text-ink-soft">{address.phone}</span>}
-                              {selected && <span className="mt-1.5 block font-medium">Selected for delivery</span>}
+                              <span className="block font-medium">
+                                {address.label || "Saved"} ·{" "}
+                                {address.line1.slice(0, 22)}
+                                {address.line1.length > 22 ? "…" : ""}
+                              </span>
+                              <span className="mt-1 block break-words text-ink-soft">
+                                {address.name || user?.name}
+                              </span>
+                              <span className="mt-1 block break-words text-ink-soft">
+                                {[
+                                  address.line1,
+                                  address.line2,
+                                  address.city,
+                                  address.state,
+                                  address.pincode,
+                                ]
+                                  .filter(Boolean)
+                                  .join(", ")}
+                              </span>
+                              {address.phone && (
+                                <span className="mt-1 block text-ink-soft">
+                                  {address.phone}
+                                </span>
+                              )}
+                              {selected && (
+                                <span className="mt-1.5 block font-medium">
+                                  Selected for delivery
+                                </span>
+                              )}
                             </span>
                           </button>
                         </li>
@@ -244,58 +430,295 @@ export default function CheckoutForm({ confirmationOrderId, initialUser, initial
               )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="phone" className="mb-1.5 block text-sm font-medium">Mobile number</label>
-                  <div className="flex gap-2"><span className="flex h-11 items-center rounded-lg border border-line bg-[#f7f3ed] px-3 text-sm">+91</span>
-                    <input id="phone" inputMode="numeric" maxLength={10} autoComplete="tel-national" value={phone} onChange={(e) => setContactPhone(e.target.value.replace(/\D/g, ""))} className={field} placeholder="98765 43210" /></div>
+                  <label
+                    htmlFor="phone"
+                    className="mb-1.5 block text-sm font-medium"
+                  >
+                    Mobile number
+                  </label>
+                  <div className="flex gap-2">
+                    <span className="flex h-11 items-center rounded-lg border border-line bg-[#f7f3ed] px-3 text-sm">
+                      +91
+                    </span>
+                    <input
+                      id="phone"
+                      inputMode="numeric"
+                      maxLength={10}
+                      autoComplete="tel-national"
+                      value={phone}
+                      onChange={(e) =>
+                        setContactPhone(e.target.value.replace(/\D/g, ""))
+                      }
+                      className={field}
+                      placeholder="98765 43210"
+                    />
+                  </div>
                   <Err errors={errors} k="phone" />
                 </div>
-                <div><label htmlFor="name" className="mb-1.5 block text-sm font-medium">Full name</label><input id="name" autoComplete="name" value={addr.name} onChange={(e) => setAddr({ name: e.target.value })} className={field} /><Err errors={errors} k="name" /></div>
-                <div className="sm:col-span-2"><label htmlFor="l1" className="mb-1.5 block text-sm font-medium">Address</label><input id="l1" autoComplete="address-line1" value={addr.line1} onChange={(e) => setAddr({ line1: e.target.value })} className={field} placeholder="House no., building, street" /><Err errors={errors} k="line1" /></div>
-                <div className="sm:col-span-2"><label htmlFor="l2" className="mb-1.5 block text-sm font-medium">Landmark <span className="font-normal text-ink-soft">(optional)</span></label><input id="l2" value={addr.line2} onChange={(e) => setAddr({ line2: e.target.value })} className={field} /></div>
-                <div><label htmlFor="pin" className="mb-1.5 block text-sm font-medium">Pincode</label><input id="pin" inputMode="numeric" maxLength={6} autoComplete="postal-code" value={addr.pincode} onChange={(e) => setAddr({ pincode: e.target.value.replace(/\D/g, "") })} className={field} /><Err errors={errors} k="pincode" /></div>
-                <div><label htmlFor="city" className="mb-1.5 block text-sm font-medium">City</label><input id="city" autoComplete="address-level2" value={addr.city} onChange={(e) => setAddr({ city: e.target.value })} className={field} /><Err errors={errors} k="city" /></div>
-                <div className="sm:col-span-2"><label htmlFor="state" className="mb-1.5 block text-sm font-medium">State</label><input id="state" autoComplete="address-level1" value={addr.state} onChange={(e) => setAddr({ state: e.target.value })} className={field} /><Err errors={errors} k="state" /></div>
-                <div className="flex items-start gap-3 rounded-xl border border-[#e6d9c4] bg-[#fbf5e9] p-3 text-xs sm:col-span-2"><Truck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[#916b36]" /><div><p className="font-medium">Standard delivery</p><p className="mt-1 text-ink-soft">Estimated arrival in 5–6 business days. Shipping is calculated in your order summary.</p></div></div>
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="mb-1.5 block text-sm font-medium"
+                  >
+                    Full name
+                  </label>
+                  <input
+                    id="name"
+                    autoComplete="name"
+                    value={addr.name}
+                    onChange={(e) => setAddr({ name: e.target.value })}
+                    className={field}
+                  />
+                  <Err errors={errors} k="name" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="l1"
+                    className="mb-1.5 block text-sm font-medium"
+                  >
+                    Address
+                  </label>
+                  <input
+                    id="l1"
+                    autoComplete="address-line1"
+                    value={addr.line1}
+                    onChange={(e) => setAddr({ line1: e.target.value })}
+                    className={field}
+                    placeholder="House no., building, street"
+                  />
+                  <Err errors={errors} k="line1" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="l2"
+                    className="mb-1.5 block text-sm font-medium"
+                  >
+                    Landmark{" "}
+                    <span className="font-normal text-ink-soft">
+                      (optional)
+                    </span>
+                  </label>
+                  <input
+                    id="l2"
+                    value={addr.line2}
+                    onChange={(e) => setAddr({ line2: e.target.value })}
+                    className={field}
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="pin"
+                    className="mb-1.5 block text-sm font-medium"
+                  >
+                    Pincode
+                  </label>
+                  <input
+                    id="pin"
+                    inputMode="numeric"
+                    maxLength={6}
+                    autoComplete="postal-code"
+                    value={addr.pincode}
+                    onChange={(e) =>
+                      setAddr({ pincode: e.target.value.replace(/\D/g, "") })
+                    }
+                    className={field}
+                  />
+                  <Err errors={errors} k="pincode" />
+                </div>
+                <div>
+                  <label
+                    htmlFor="city"
+                    className="mb-1.5 block text-sm font-medium"
+                  >
+                    City
+                  </label>
+                  <input
+                    id="city"
+                    autoComplete="address-level2"
+                    value={addr.city}
+                    onChange={(e) => setAddr({ city: e.target.value })}
+                    className={field}
+                  />
+                  <Err errors={errors} k="city" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="state"
+                    className="mb-1.5 block text-sm font-medium"
+                  >
+                    State
+                  </label>
+                  <input
+                    id="state"
+                    autoComplete="address-level1"
+                    value={addr.state}
+                    onChange={(e) => setAddr({ state: e.target.value })}
+                    className={field}
+                  />
+                  <Err errors={errors} k="state" />
+                </div>
+                <div className="flex items-start gap-3 rounded-xl border border-[#e6d9c4] bg-[#fbf5e9] p-3 text-xs sm:col-span-2">
+                  <Truck
+                    aria-hidden="true"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#916b36]"
+                  />
+                  <div>
+                    <p className="font-medium">Standard delivery</p>
+                    <p className="mt-1 text-ink-soft">
+                      Estimated arrival in 5–6 business days. Shipping is
+                      calculated in your order summary.
+                    </p>
+                  </div>
+                </div>
               </div>
             </Card>
           </div>
 
-          <aside className="h-fit min-w-0 space-y-4 lg:sticky lg:top-6" aria-label="Order summary and payment">
+          <aside
+            className="h-fit min-w-0 space-y-4 lg:sticky lg:top-6"
+            aria-label="Order summary and payment"
+          >
             <section className="overflow-hidden rounded-2xl border border-line bg-white p-5 shadow-[0_8px_30px_-24px_rgba(45,28,25,0.3)] sm:p-6">
               <Summary />
               <div className="mt-4 border-t border-line pt-4">
-                {placeError && <p role="alert" className="mt-5 rounded-xl bg-danger/10 p-3 text-sm text-danger">{placeError} <Link href="/cart" prefetch={true} className="underline">Back to bag</Link></p>}
-                {issues.length > 0 && <p role="alert" className="mt-5 rounded-xl bg-danger/10 p-3 text-sm text-danger">{issues[0].message} <Link href="/cart" prefetch={true} className="underline">Review your bag</Link></p>}
-                <button onClick={choosePayment} disabled={!!confirmationId || checking || placing || !canCheckout} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#43262b] text-sm font-medium text-cream transition hover:bg-[#61353e] disabled:opacity-60">
-                  <Lock className="h-4 w-4" /> {checking ? "Checking details…" : placing ? "Placing order…" : quoting ? "Updating total…" : `Pay · ${formatINR(total)}`}
+                {placeError && (
+                  <p
+                    role="alert"
+                    className="mt-5 rounded-xl bg-danger/10 p-3 text-sm text-danger"
+                  >
+                    {placeError}{" "}
+                    <Link href="/cart" prefetch={true} className="underline">
+                      Back to bag
+                    </Link>
+                  </p>
+                )}
+                {issues.length > 0 && (
+                  <p
+                    role="alert"
+                    className="mt-5 rounded-xl bg-danger/10 p-3 text-sm text-danger"
+                  >
+                    {issues[0].message}{" "}
+                    <Link href="/cart" prefetch={true} className="underline">
+                      Review your bag
+                    </Link>
+                  </p>
+                )}
+                <button
+                  onClick={choosePayment}
+                  disabled={
+                    !!confirmationId || checking || placing || !canCheckout
+                  }
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#43262b] text-sm font-medium text-cream transition hover:bg-[#61353e] disabled:opacity-60"
+                >
+                  <Lock className="h-4 w-4" />{" "}
+                  {checking
+                    ? "Checking details…"
+                    : placing
+                      ? "Placing order…"
+                      : quoting
+                        ? "Updating total…"
+                        : `Pay · ${formatINR(total)}`}
                 </button>
-                <p className="mt-3 text-center text-xs text-ink-soft">By placing your order you agree to our <Link href="/terms" className="underline">Terms</Link> and <Link href="/privacy" className="underline">Privacy Policy</Link>.</p>
+                <p className="mt-3 text-center text-xs text-ink-soft">
+                  By placing your order you agree to our{" "}
+                  <Link href="/terms" className="underline">
+                    Terms
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/privacy" className="underline">
+                    Privacy Policy
+                  </Link>
+                  .
+                </p>
               </div>
             </section>
           </aside>
         </div>
       </div>
 
-      {confirmationId && <OrderConfirmationModal key={confirmationId} orderId={confirmationId} />}
+      {confirmationId && (
+        <OrderConfirmationModal key={confirmationId} orderId={confirmationId} />
+      )}
 
-      <dialog ref={paymentDialog} aria-labelledby="payment-title" onCancel={(event) => { if (placing) event.preventDefault(); }} className="m-auto w-[calc(100%_-_2rem)] max-w-md rounded-2xl border border-line bg-white p-6 text-ink backdrop:bg-ink/40">
+      <dialog
+        ref={paymentDialog}
+        aria-labelledby="payment-title"
+        onCancel={(event) => {
+          if (placing) event.preventDefault();
+        }}
+        className="m-auto w-[calc(100%_-_2rem)] max-w-md rounded-2xl border border-line bg-white p-6 text-ink backdrop:bg-ink/40"
+      >
         <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 id="payment-title" className="font-heading text-2xl">Choose payment method</h2>
-          <button type="button" onClick={() => paymentDialog.current?.close()} disabled={placing} aria-label="Close payment options" className="rounded-full p-2 hover:bg-sand disabled:opacity-50"><X className="h-5 w-5" /></button>
+          <h2 id="payment-title" className="font-heading text-2xl">
+            Choose payment method
+          </h2>
+          <button
+            type="button"
+            onClick={() => paymentDialog.current?.close()}
+            disabled={placing}
+            aria-label="Close payment options"
+            className="rounded-full p-2 hover:bg-sand disabled:opacity-50"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
-        <div className="space-y-3" role="radiogroup" aria-label="Payment method">
-          {([["online", "Pay online", "UPI, cards, netbanking, wallets via Razorpay"], ["cod", "Cash on delivery", "Pay when your order arrives"]] as const).map(([v, t, d]) => (
-            <label key={v} className={`flex cursor-pointer items-start gap-4 rounded-xl border p-4 ${pay === v ? "border-[#75414b] bg-[#fbf4f1]" : "border-line"}`}>
-              <input type="radio" name="pay" disabled={placing} checked={pay === v} onChange={() => setPay(v)} className="mt-1 h-4 w-4 accent-[#43262b]" />
-              <span><span className="block font-medium">{t}</span><span className="text-sm text-ink-soft">{d}</span></span>
+        <div
+          className="space-y-3"
+          role="radiogroup"
+          aria-label="Payment method"
+        >
+          {(
+            [
+              [
+                "online",
+                "Pay online",
+                "UPI, cards, netbanking, wallets via Razorpay",
+              ],
+              ["cod", "Cash on delivery", "Pay when your order arrives"],
+            ] as const
+          ).map(([v, t, d]) => (
+            <label
+              key={v}
+              className={`flex cursor-pointer items-start gap-4 rounded-xl border p-4 ${pay === v ? "border-[#75414b] bg-[#fbf4f1]" : "border-line"}`}
+            >
+              <input
+                type="radio"
+                name="pay"
+                disabled={placing}
+                checked={pay === v}
+                onChange={() => setPay(v)}
+                className="mt-1 h-4 w-4 accent-[#43262b]"
+              />
+              <span>
+                <span className="block font-medium">{t}</span>
+                <span className="text-sm text-ink-soft">{d}</span>
+              </span>
             </label>
           ))}
         </div>
 
-        {placeError && <p role="alert" className="mt-4 text-sm text-danger">{placeError}</p>}
-        {issues.length > 0 && <p role="alert" className="mt-4 text-sm text-danger">{issues[0].message}</p>}
-        <button type="button" onClick={place} disabled={placing || !canCheckout} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#43262b] text-sm font-medium text-cream transition hover:bg-[#61353e] disabled:opacity-60">
-          <Lock className="h-4 w-4" /> {placing ? "Placing order…" : quoting ? "Updating total…" : `${pay === "cod" ? "Place order" : "Pay online"} · ${formatINR(total)}`}
+        {placeError && (
+          <p role="alert" className="mt-4 text-sm text-danger">
+            {placeError}
+          </p>
+        )}
+        {issues.length > 0 && (
+          <p role="alert" className="mt-4 text-sm text-danger">
+            {issues[0].message}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={place}
+          disabled={placing || !canCheckout}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#43262b] text-sm font-medium text-cream transition hover:bg-[#61353e] disabled:opacity-60"
+        >
+          <Lock className="h-4 w-4" />{" "}
+          {placing
+            ? "Placing order…"
+            : quoting
+              ? "Updating total…"
+              : `${pay === "cod" ? "Place order" : "Pay online"} · ${formatINR(total)}`}
         </button>
       </dialog>
     </div>
@@ -307,11 +730,28 @@ function Summary() {
   const count = items.reduce((sum, item) => sum + item.qty, 0);
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3"><h2 className="font-heading text-xl">Order summary</h2><span className="flex items-center gap-1.5 rounded-full bg-[#f3ede5] px-2.5 py-1 text-[10px] text-ink-soft"><ShoppingBag className="h-3 w-3" />{count} {count === 1 ? "item" : "items"}</span></div>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-heading text-xl">Order summary</h2>
+        <span className="flex items-center gap-1.5 rounded-full bg-[#f3ede5] px-2.5 py-1 text-[10px] text-ink-soft">
+          <ShoppingBag className="h-3 w-3" />
+          {count} {count === 1 ? "item" : "items"}
+        </span>
+      </div>
       <ul className="max-h-64 space-y-3 overflow-y-auto py-2 pr-2">
         {items.map((i) => (
           <li key={i.key} className="flex items-center gap-4">
-            <div className="relative shrink-0"><Image src={i.image || "/placeholder.svg"} alt="" width={52} height={68} className="h-[68px] w-[52px] rounded-lg border border-line object-cover" /><span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[11px] text-cream">{i.qty}</span></div>
+            <div className="relative shrink-0">
+              <Image
+                src={i.image || "/placeholder.svg"}
+                alt=""
+                width={52}
+                height={68}
+                className="h-[68px] w-[52px] rounded-lg border border-line object-cover"
+              />
+              <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[11px] text-cream">
+                {i.qty}
+              </span>
+            </div>
             <p className="min-w-0 line-clamp-2 flex-1 text-sm">{i.title}</p>
             <p className="text-sm font-medium">{formatINR(i.price * i.qty)}</p>
           </li>
@@ -332,28 +772,111 @@ function LoyaltyRedemption() {
   if (!loyalty) return null;
   const apply = () => {
     const points = Number(input);
-    if (!/^\d+$/.test(input) || !Number.isSafeInteger(points) || points <= 0 || points % loyalty.conversion_points || points > loyalty.max_points) {
-      setError(`Enter a multiple of ${loyalty.conversion_points}, up to ${loyalty.max_points} points.`);
+    if (
+      !/^\d+$/.test(input) ||
+      !Number.isSafeInteger(points) ||
+      points <= 0 ||
+      points % loyalty.conversion_points ||
+      points > loyalty.max_points
+    ) {
+      setError(
+        `Enter a multiple of ${loyalty.conversion_points}, up to ${loyalty.max_points} points.`,
+      );
       return;
     }
     setError(null);
     setLoyaltyPoints(points);
   };
-  return <section className="space-y-3 rounded-xl border border-line p-4" aria-label="Redeem loyalty points">
-    <h3 className="text-sm font-medium">Redeem loyalty points</h3>
-    <p className="text-sm text-ink-soft">Available: <strong className="text-ink">{loyalty.balance_points.toLocaleString("en-IN")} points</strong></p>
-    <p className="text-xs text-ink-soft">{loyalty.conversion_points.toLocaleString("en-IN")} points = {formatINR(loyalty.conversion_value_minor / 100)} off</p>
-    {loyaltyPoints > 0 ? <div className="flex items-center justify-between gap-3 text-sm">
-      <span aria-live="polite">{quoting ? "Updating deduction…" : `Using ${loyaltyPoints.toLocaleString("en-IN")} points`}</span>
-      <button type="button" onClick={() => { setLoyaltyPoints(0); setError(null); }} className="underline underline-offset-4">Remove</button>
-    </div> : <>
-      <label htmlFor="redeem-points" className="sr-only">Points to redeem</label>
-      <div className="flex gap-2">
-        <input id="redeem-points" type="number" inputMode="numeric" min={loyalty.conversion_points} max={loyalty.max_points} step={loyalty.conversion_points} value={input} onChange={(e) => { setInput(e.target.value); setError(null); }} placeholder="Points to redeem" disabled={quoting || loyalty.max_points === 0} className="h-11 min-w-0 flex-1 rounded-full border border-line bg-white px-4 text-sm disabled:opacity-50" />
-        <button type="button" onClick={apply} disabled={quoting || loyalty.max_points === 0} className="rounded-full bg-taupe px-5 text-sm font-medium disabled:opacity-50">Apply</button>
-      </div>
-      {loyalty.max_points > 0 ? <button type="button" disabled={quoting} onClick={() => { setInput(String(loyalty.max_points)); setLoyaltyPoints(loyalty.max_points); setError(null); }} className="text-xs underline underline-offset-4">Use maximum ({loyalty.max_points.toLocaleString("en-IN")} points)</button> : <p className="text-xs text-ink-soft">No points available to redeem on this order.</p>}
-    </>}
-    {(error || loyalty.reason) && <p role="alert" className="text-xs text-danger">{error || loyalty.reason}</p>}
-  </section>;
+  return (
+    <section
+      className="space-y-3 rounded-xl border border-line p-4"
+      aria-label="Redeem loyalty points"
+    >
+      <h3 className="text-sm font-medium">Redeem loyalty points</h3>
+      <p className="text-sm text-ink-soft">
+        Available:{" "}
+        <strong className="text-ink">
+          {loyalty.balance_points.toLocaleString("en-IN")} points
+        </strong>
+      </p>
+      <p className="text-xs text-ink-soft">
+        {loyalty.conversion_points.toLocaleString("en-IN")} points ={" "}
+        {formatINR(loyalty.conversion_value_minor / 100)} off
+      </p>
+      {loyaltyPoints > 0 ? (
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <span aria-live="polite">
+            {quoting
+              ? "Updating deduction…"
+              : `Using ${loyaltyPoints.toLocaleString("en-IN")} points`}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setLoyaltyPoints(0);
+              setError(null);
+            }}
+            className="underline underline-offset-4"
+          >
+            Remove
+          </button>
+        </div>
+      ) : (
+        <>
+          <label htmlFor="redeem-points" className="sr-only">
+            Points to redeem
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="redeem-points"
+              type="number"
+              inputMode="numeric"
+              min={loyalty.conversion_points}
+              max={loyalty.max_points}
+              step={loyalty.conversion_points}
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                setError(null);
+              }}
+              placeholder="Points to redeem"
+              disabled={quoting || loyalty.max_points === 0}
+              className="h-11 min-w-0 flex-1 rounded-full border border-line bg-white px-4 text-sm disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={apply}
+              disabled={quoting || loyalty.max_points === 0}
+              className="rounded-full bg-taupe px-5 text-sm font-medium disabled:opacity-50"
+            >
+              Apply
+            </button>
+          </div>
+          {loyalty.max_points > 0 ? (
+            <button
+              type="button"
+              disabled={quoting}
+              onClick={() => {
+                setInput(String(loyalty.max_points));
+                setLoyaltyPoints(loyalty.max_points);
+                setError(null);
+              }}
+              className="text-xs underline underline-offset-4"
+            >
+              Use maximum ({loyalty.max_points.toLocaleString("en-IN")} points)
+            </button>
+          ) : (
+            <p className="text-xs text-ink-soft">
+              No points available to redeem on this order.
+            </p>
+          )}
+        </>
+      )}
+      {(error || loyalty.reason) && (
+        <p role="alert" className="text-xs text-danger">
+          {error || loyalty.reason}
+        </p>
+      )}
+    </section>
+  );
 }

@@ -24,11 +24,20 @@ export function OrderConfirmationModal({ orderId }: { orderId: string }) {
     <dialog
       ref={dialog}
       aria-label="Order confirmation"
-      onCancel={(event) => { event.preventDefault(); router.replace("/account/orders"); }}
+      onCancel={(event) => {
+        event.preventDefault();
+        router.replace("/account/orders");
+      }}
       className="m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-xl overflow-y-auto rounded-2xl border border-line bg-white p-6 text-ink backdrop:bg-ink/40 sm:p-8"
     >
       <div className="mb-3 flex justify-end">
-        <button type="button" autoFocus onClick={() => router.replace("/account/orders")} aria-label="Close order confirmation" className="rounded-full p-2 hover:bg-sand">
+        <button
+          type="button"
+          autoFocus
+          onClick={() => router.replace("/account/orders")}
+          aria-label="Close order confirmation"
+          className="rounded-full p-2 hover:bg-sand"
+        >
           <X className="h-5 w-5" />
         </button>
       </div>

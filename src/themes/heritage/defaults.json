@@ -49,7 +49,11 @@
       "copyright": "",
       "payments": []
     },
-    "pages": { "about": "", "shipping": "", "returns": "", "care": "", "faq": "", "privacy": "", "terms": "" }
+    "pages": {
+      "about": "",
+      "care": "",
+      "faq": ""
+    }
   },
   "templates": {
     "home": [
@@ -59,23 +63,60 @@
         "settings": {
           "slides": [
             {
-              "eyebrow": "New season", "title": "Welcome to our store",
+              "eyebrow": "New season",
+              "title": "Welcome to our store",
               "text": "Discover our latest arrivals, picked with care for you.",
-              "cta_label": "Shop now", "cta_href": "/shop", "cta2_label": "New Arrivals", "cta2_href": "/c/new-arrivals", "collection": ""
+              "cta_label": "Shop now",
+              "cta_href": "/shop",
+              "cta2_label": "New Arrivals",
+              "cta2_href": "/c/new-arrivals",
+              "collection": ""
             }
           ],
           "badges": []
         }
       },
-      { "id": "featured", "type": "featured-collections", "settings": { "eyebrow": "Curated for you", "title": "Shop our collections", "href": "/collections", "limit": 8 } },
-      { "id": "new", "type": "product-rail", "settings": { "source": "new", "eyebrow": "Just in", "title": "New Arrivals", "href": "/c/new-arrivals", "link_label": "View all" } },
-      { "id": "value", "type": "product-rail", "settings": { "source": "value", "eyebrow": "Offers", "title": "Best Value Picks", "href": "/shop?sort=price-asc", "link_label": "View all" } },
       {
-        "id": "newsletter", "type": "newsletter",
+        "id": "featured",
+        "type": "featured-collections",
         "settings": {
-          "eyebrow": "Stay in touch", "title": "Be the first to know",
+          "eyebrow": "Curated for you",
+          "title": "Shop our collections",
+          "href": "/collections",
+          "limit": 8
+        }
+      },
+      {
+        "id": "new",
+        "type": "product-rail",
+        "settings": {
+          "source": "new",
+          "eyebrow": "Just in",
+          "title": "New Arrivals",
+          "href": "/c/new-arrivals",
+          "link_label": "View all"
+        }
+      },
+      {
+        "id": "value",
+        "type": "product-rail",
+        "settings": {
+          "source": "value",
+          "eyebrow": "Offers",
+          "title": "Best Value Picks",
+          "href": "/shop?sort=price-asc",
+          "link_label": "View all"
+        }
+      },
+      {
+        "id": "newsletter",
+        "type": "newsletter",
+        "settings": {
+          "eyebrow": "Stay in touch",
+          "title": "Be the first to know",
           "text": "New arrivals and offers, straight to your inbox.",
-          "note": "No spam. Unsubscribe anytime.", "image_collections": []
+          "note": "No spam. Unsubscribe anytime.",
+          "image_collections": []
         }
       }
     ]

@@ -13,7 +13,11 @@ const WEEK = 7 * 24 * 3600;
 
 export async function sessionToken() {
   const jar = await cookies();
-  return jar.get(SESSION_COOKIE)?.value ?? jar.get(LEGACY_SESSION_COOKIE)?.value ?? null;
+  return (
+    jar.get(SESSION_COOKIE)?.value ??
+    jar.get(LEGACY_SESSION_COOKIE)?.value ??
+    null
+  );
 }
 
 export async function setSession(token: string, maxAge = WEEK) {
@@ -42,21 +46,48 @@ export function sameOrigin(req: Request) {
 }
 
 export function fail(e: unknown) {
-  if (e instanceof ApiError) return NextResponse.json({ error: { code: e.code, message: e.message, details: e.details } }, { status: e.status });
+  if (e instanceof ApiError)
+    return NextResponse.json(
+      { error: { code: e.code, message: e.message, details: e.details } },
+      { status: e.status },
+    );
   console.error(e);
-  return NextResponse.json({ error: { code: "error", message: "Something went wrong. Please try again." } }, { status: 500 });
+  return NextResponse.json(
+    {
+      error: {
+        code: "error",
+        message: "Something went wrong. Please try again.",
+      },
+    },
+    { status: 500 },
+  );
 }
 
-type Handler<T> = (ctx: { token: string | null; body: unknown; req: Request }) => Promise<T>;
+type Handler<T> = (ctx: {
+  token: string | null;
+  body: unknown;
+  req: Request;
+}) => Promise<T>;
 
 /** Wrap a route: origin check for writes, JSON body parsing, error mapping. */
 export function route<T>(h: Handler<T>, opts: { write?: boolean } = {}) {
   return async (req: Request) => {
     try {
-      if (opts.write && !sameOrigin(req)) return NextResponse.json({ error: { code: "forbidden", message: "Cross-site request refused." } }, { status: 403 });
+      if (opts.write && !sameOrigin(req))
+        return NextResponse.json(
+          {
+            error: {
+              code: "forbidden",
+              message: "Cross-site request refused.",
+            },
+          },
+          { status: 403 },
+        );
       const body = opts.write ? await req.json().catch(() => ({})) : undefined;
       const out = await h({ token: await sessionToken(), body, req });
-      return out instanceof NextResponse ? out : NextResponse.json(out ?? { ok: true });
+      return out instanceof NextResponse
+        ? out
+        : NextResponse.json(out ?? { ok: true });
     } catch (e) {
       return fail(e);
     }

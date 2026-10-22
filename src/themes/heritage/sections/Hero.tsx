@@ -6,10 +6,25 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 export type HeroImages = Record<string, string[]>;
 export type HeroSlide = {
-  eyebrow: string; title: string; text: string; cta_label: string; cta_href: string; cta2_label: string; cta2_href: string; collection: string;
+  eyebrow: string;
+  title: string;
+  text: string;
+  cta_label: string;
+  cta_href: string;
+  cta2_label: string;
+  cta2_href: string;
+  collection: string;
 };
 
-export function Hero({ slides, badges, images }: { slides: HeroSlide[]; badges: string[]; images: HeroImages }) {
+export function Hero({
+  slides,
+  badges,
+  images,
+}: {
+  slides: HeroSlide[];
+  badges: string[];
+  images: HeroImages;
+}) {
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
   const n = slides.length;
@@ -31,7 +46,10 @@ export function Hero({ slides, badges, images }: { slides: HeroSlide[]; badges: 
       onBlur={() => setPaused(false)}
     >
       {/* soft decorative glow */}
-      <div className="pointer-events-none absolute -right-32 top-1/2 h-[560px] w-[560px] -translate-y-1/2 rounded-full bg-gold/20 blur-3xl" aria-hidden />
+      <div
+        className="pointer-events-none absolute -right-32 top-1/2 h-[560px] w-[560px] -translate-y-1/2 rounded-full bg-gold/20 blur-3xl"
+        aria-hidden
+      />
 
       {/* All slides share one grid cell, so the tallest one sets the height (no layout jump). */}
       <div className="grid">
@@ -50,18 +68,43 @@ export function Hero({ slides, badges, images }: { slides: HeroSlide[]; badges: 
               <div className="mx-auto grid max-w-[1400px] items-center gap-6 px-4 pb-16 pt-8 sm:px-6 md:grid-cols-[1fr_1.1fr] md:gap-10 md:pb-20 md:pt-14 lg:min-h-[640px]">
                 <div className="order-2 text-center md:order-1 md:text-left">
                   <p className="mb-4 flex items-center justify-center gap-3 text-[11px] font-medium uppercase tracking-[0.25em] text-taupe-dark sm:text-xs md:justify-start">
-                    <span className="hidden h-px w-10 bg-gold md:block" aria-hidden />
+                    <span
+                      className="hidden h-px w-10 bg-gold md:block"
+                      aria-hidden
+                    />
                     {s.eyebrow}
                   </p>
-                  <h1 className="font-heading text-5xl font-medium leading-[1.02] sm:text-6xl lg:text-[5.5rem]">{s.title}</h1>
-                  <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-ink-soft md:mx-0">{s.text}</p>
+                  <h1 className="font-heading text-5xl font-medium leading-[1.02] sm:text-6xl lg:text-[5.5rem]">
+                    {s.title}
+                  </h1>
+                  <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-ink-soft md:mx-0">
+                    {s.text}
+                  </p>
                   <div className="mt-8 flex flex-wrap justify-center gap-3 md:justify-start">
-                    {s.cta_label && s.cta_href && <Link href={s.cta_href} tabIndex={active ? 0 : -1} className="inline-flex h-12 items-center rounded-full bg-ink px-8 text-sm font-medium text-cream shadow-sm transition-colors hover:bg-taupe-dark">{s.cta_label}</Link>}
-                    {s.cta2_label && s.cta2_href && <Link href={s.cta2_href} tabIndex={active ? 0 : -1} className="inline-flex h-12 items-center rounded-full border border-ink px-8 text-sm font-medium transition-colors hover:bg-ink hover:text-cream">{s.cta2_label}</Link>}
+                    {s.cta_label && s.cta_href && (
+                      <Link
+                        href={s.cta_href}
+                        tabIndex={active ? 0 : -1}
+                        className="inline-flex h-12 items-center rounded-full bg-ink px-8 text-sm font-medium text-cream shadow-sm transition-colors hover:bg-taupe-dark"
+                      >
+                        {s.cta_label}
+                      </Link>
+                    )}
+                    {s.cta2_label && s.cta2_href && (
+                      <Link
+                        href={s.cta2_href}
+                        tabIndex={active ? 0 : -1}
+                        className="inline-flex h-12 items-center rounded-full border border-ink px-8 text-sm font-medium transition-colors hover:bg-ink hover:text-cream"
+                      >
+                        {s.cta2_label}
+                      </Link>
+                    )}
                   </div>
                   {badges.length > 0 && (
                     <ul className="mt-9 hidden flex-wrap gap-x-7 gap-y-1 text-xs text-ink-soft md:flex">
-                      {badges.map((b) => <li key={b}>✦ {b}</li>)}
+                      {badges.map((b) => (
+                        <li key={b}>✦ {b}</li>
+                      ))}
                     </ul>
                   )}
                 </div>
@@ -73,7 +116,14 @@ export function Hero({ slides, badges, images }: { slides: HeroSlide[]; badges: 
                       key={src}
                       className={`relative overflow-hidden rounded-t-[999px] bg-taupe/30 shadow-xl ring-1 ring-gold/40 ${k === 1 ? "aspect-[3/5] w-[38%]" : "aspect-[3/4.2] w-[30%]"} ${k === 2 ? "hidden sm:block" : ""}`}
                     >
-                      <Image src={src} alt="" fill sizes="(min-width:768px) 22vw, 35vw" priority={idx === 0} className="object-cover" />
+                      <Image
+                        src={src}
+                        alt=""
+                        fill
+                        sizes="(min-width:768px) 22vw, 35vw"
+                        priority={idx === 0}
+                        className="object-cover"
+                      />
                     </div>
                   ))}
                 </div>
@@ -85,11 +135,29 @@ export function Hero({ slides, badges, images }: { slides: HeroSlide[]; badges: 
 
       {n > 1 && (
         <div className="absolute inset-x-0 bottom-4 flex items-center justify-center gap-3">
-          <button aria-label="Previous slide" onClick={() => setI((i - 1 + n) % n)} className="hidden rounded-full p-1.5 hover:bg-cream/70 sm:block"><ChevronLeft className="h-5 w-5" /></button>
+          <button
+            aria-label="Previous slide"
+            onClick={() => setI((i - 1 + n) % n)}
+            className="hidden rounded-full p-1.5 hover:bg-cream/70 sm:block"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
           {slides.map((s, idx) => (
-            <button key={idx} aria-label={`Go to slide ${idx + 1}`} aria-current={idx === i} onClick={() => setI(idx)} className={`h-2 rounded-full transition-all ${idx === i ? "w-8 bg-ink" : "w-2 bg-ink/30"}`} />
+            <button
+              key={idx}
+              aria-label={`Go to slide ${idx + 1}`}
+              aria-current={idx === i}
+              onClick={() => setI(idx)}
+              className={`h-2 rounded-full transition-all ${idx === i ? "w-8 bg-ink" : "w-2 bg-ink/30"}`}
+            />
           ))}
-          <button aria-label="Next slide" onClick={() => setI((i + 1) % n)} className="hidden rounded-full p-1.5 hover:bg-cream/70 sm:block"><ChevronRight className="h-5 w-5" /></button>
+          <button
+            aria-label="Next slide"
+            onClick={() => setI((i + 1) % n)}
+            className="hidden rounded-full p-1.5 hover:bg-cream/70 sm:block"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
       )}
     </section>

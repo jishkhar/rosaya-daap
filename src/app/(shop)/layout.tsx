@@ -9,26 +9,53 @@ import { Suspense } from "react";
 // (see lib/store.ts), so rendering on request is cheap.
 export const dynamic = "force-dynamic";
 
-async function StoreHeader({ theme, settings }: { theme: Theme; settings: Values }) {
+async function StoreHeader({
+  theme,
+  settings,
+}: {
+  theme: Theme;
+  settings: Values;
+}) {
   const collections = await getStoreCollections().catch(() => []);
   return <theme.Header collections={collections} settings={settings} />;
 }
 
-async function StoreFooter({ theme, settings }: { theme: Theme; settings: Values }) {
+async function StoreFooter({
+  theme,
+  settings,
+}: {
+  theme: Theme;
+  settings: Values;
+}) {
   const collections = await getStoreCollections().catch(() => []);
   return <theme.Footer collections={collections} settings={settings} />;
 }
 
 /** Render the page immediately; catalogue decoration must not block the bag or account pages. */
-export default async function ShopLayout({ children }: { children: React.ReactNode }) {
+export default async function ShopLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { theme, config, preview } = await getStorefront();
   const { announcement, header, footer } = config.settings;
   return (
     <>
-      <a href="#main" className="sr-only z-[100] bg-ink px-4 py-2 text-cream focus:not-sr-only focus:fixed focus:left-2 focus:top-2">Skip to content</a>
+      <a
+        href="#main"
+        className="sr-only z-[100] bg-ink px-4 py-2 text-cream focus:not-sr-only focus:fixed focus:left-2 focus:top-2"
+      >
+        Skip to content
+      </a>
       {preview && (
-        <div role="status" className="bg-accent px-4 py-2 text-center text-xs font-medium text-white">
-          Previewing unpublished theme changes. <a href="/preview?exit=1" className="underline">Exit preview</a>
+        <div
+          role="status"
+          className="bg-accent px-4 py-2 text-center text-xs font-medium text-white"
+        >
+          Previewing unpublished theme changes.{" "}
+          <a href="/preview?exit=1" className="underline">
+            Exit preview
+          </a>
         </div>
       )}
       <theme.AnnouncementBar settings={announcement} />

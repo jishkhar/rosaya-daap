@@ -5,19 +5,47 @@ import { parseFilters, type Product, type Variant } from "@/lib/catalog";
 
 /* ---------- API shapes (money in paise) ---------- */
 type ApiVariant = {
-  id: string; sku: string; name: string; price_minor: number; mrp_minor: number | null;
-  attributes: { size?: string; colour?: string }; in_stock: boolean; max_qty: number; low_stock: boolean;
+  id: string;
+  sku: string;
+  name: string;
+  price_minor: number;
+  mrp_minor: number | null;
+  attributes: { size?: string; colour?: string };
+  in_stock: boolean;
+  max_qty: number;
+  low_stock: boolean;
 };
 type ApiProduct = {
-  id: string; slug: string; title: string; variant_id: string | null; variant_count: number;
+  id: string;
+  slug: string;
+  title: string;
+  variant_id: string | null;
+  variant_count: number;
   category: { slug: string; name: string } | null;
-  price_minor: number; mrp_minor: number | null; images: string[]; colours: string[]; crafts: string[]; occasions: string[]; sizes: string[];
-  in_stock: boolean; created_at: string; description?: string; attributes?: Record<string, unknown>; variants?: ApiVariant[];
+  price_minor: number;
+  mrp_minor: number | null;
+  images: string[];
+  colours: string[];
+  crafts: string[];
+  occasions: string[];
+  sizes: string[];
+  in_stock: boolean;
+  created_at: string;
+  description?: string;
+  attributes?: Record<string, unknown>;
+  variants?: ApiVariant[];
 };
 type ApiFacet = { value: string; n: number };
 type ApiList = {
-  items: ApiProduct[]; total: number;
-  facets?: { colours: ApiFacet[]; crafts: ApiFacet[]; occasions: ApiFacet[]; price_min_minor: number | null; price_max_minor: number | null };
+  items: ApiProduct[];
+  total: number;
+  facets?: {
+    colours: ApiFacet[];
+    crafts: ApiFacet[];
+    occasions: ApiFacet[];
+    price_min_minor: number | null;
+    price_max_minor: number | null;
+  };
 };
 
 const rupees = (minor: number) => minor / 100;
@@ -25,9 +53,15 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function toProduct(a: ApiProduct): Product {
   const variants: Variant[] = (a.variants ?? []).map((v) => ({
-    id: v.id, name: v.name, size: v.attributes.size, colour: v.attributes.colour ? cap(v.attributes.colour) : undefined,
-    price: rupees(v.price_minor), mrp: v.mrp_minor ? rupees(v.mrp_minor) : null,
-    inStock: v.in_stock, maxQty: v.max_qty, lowStock: v.low_stock,
+    id: v.id,
+    name: v.name,
+    size: v.attributes.size,
+    colour: v.attributes.colour ? cap(v.attributes.colour) : undefined,
+    price: rupees(v.price_minor),
+    mrp: v.mrp_minor ? rupees(v.mrp_minor) : null,
+    inStock: v.in_stock,
+    maxQty: v.max_qty,
+    lowStock: v.low_stock,
   }));
   return {
     id: a.id,
@@ -38,7 +72,8 @@ function toProduct(a: ApiProduct): Product {
     category: a.category?.name ?? "",
     categorySlug: a.category?.slug ?? null,
     price: rupees(a.price_minor),
-    mrp: a.mrp_minor && a.mrp_minor > a.price_minor ? rupees(a.mrp_minor) : null,
+    mrp:
+      a.mrp_minor && a.mrp_minor > a.price_minor ? rupees(a.mrp_minor) : null,
     images: a.images.length ? a.images : ["/placeholder.svg"],
     colors: a.colours.map(cap),
     crafts: a.crafts.map(cap),
@@ -53,12 +88,27 @@ function toProduct(a: ApiProduct): Product {
 }
 
 /* ---------- queries ---------- */
-export type Scope = { collectionId?: string; category?: string; craft?: string; occasion?: string; q?: string; sort?: string };
-export type Facets = { colors: ApiFacet[]; crafts: ApiFacet[]; min: number; max: number };
+export type Scope = {
+  collectionId?: string;
+  category?: string;
+  craft?: string;
+  occasion?: string;
+  q?: string;
+  sort?: string;
+};
+export type Facets = {
+  colors: ApiFacet[];
+  crafts: ApiFacet[];
+  min: number;
+  max: number;
+};
 
 function query(params: Record<string, string | number | boolean | undefined>) {
   const p = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => v !== undefined && v !== "" && v !== false && p.set(k, String(v)));
+  Object.entries(params).forEach(
+    ([k, v]) =>
+      v !== undefined && v !== "" && v !== false && p.set(k, String(v)),
+  );
   return p.toString();
 }
 
@@ -70,7 +120,14 @@ export async function listProducts(opts: {
   facets?: boolean;
   revalidate?: number;
 }): Promise<{ items: Product[]; total: number; facets: Facets }> {
-  const { scope = {}, searchParams = {}, limit = 24, offset = 0, facets = false, revalidate } = opts;
+  const {
+    scope = {},
+    searchParams = {},
+    limit = 24,
+    offset = 0,
+    facets = false,
+    revalidate,
+  } = opts;
   const f = parseFilters(searchParams);
   const qs = query({
     collection_id: scope.collectionId,
@@ -96,22 +153,36 @@ export async function listProducts(opts: {
     facets: {
       colors: (fc?.colours ?? []).map((c) => ({ value: cap(c.value), n: c.n })),
       crafts: (fc?.crafts ?? []).map((c) => ({ value: cap(c.value), n: c.n })),
-      min: fc?.price_min_minor != null ? Math.floor(rupees(fc.price_min_minor) / 100) * 100 : 0,
-      max: fc?.price_max_minor != null ? Math.ceil(rupees(fc.price_max_minor) / 100) * 100 : 0,
+      min:
+        fc?.price_min_minor != null
+          ? Math.floor(rupees(fc.price_min_minor) / 100) * 100
+          : 0,
+      max:
+        fc?.price_max_minor != null
+          ? Math.ceil(rupees(fc.price_max_minor) / 100) * 100
+          : 0,
     },
   };
 }
 
 /** Where a storefront collection draws its products from. */
 export function scopeOf(c: Collection): Scope {
-  return c.kind === "category" ? { category: c.slug } : c.kind === "craft" ? { craft: c.slug } : { occasion: c.slug };
+  return c.kind === "category"
+    ? { category: c.slug }
+    : c.kind === "craft"
+      ? { craft: c.slug }
+      : { occasion: c.slug };
 }
 
 export const NEW_ARRIVALS: Scope = { sort: "new" };
 
 export async function getProduct(slug: string): Promise<Product | null> {
   try {
-    return toProduct(await api<ApiProduct>(`/products/${encodeURIComponent(slug)}`, { revalidate: 30 }));
+    return toProduct(
+      await api<ApiProduct>(`/products/${encodeURIComponent(slug)}`, {
+        revalidate: 30,
+      }),
+    );
   } catch (e) {
     if ((e as { status?: number }).status === 404) return null;
     throw e;
@@ -134,11 +205,18 @@ export type StoreCollection = {
 
 /** ERP selections stay live: collection metadata is never cached across requests. */
 export async function getStoreCollections(): Promise<StoreCollection[]> {
-  return (await api<{ custom?: StoreCollection[] }>("/collections")).custom ?? [];
+  return (
+    (await api<{ custom?: StoreCollection[] }>("/collections")).custom ?? []
+  );
 }
 
-export async function getStoreCollection(id: string): Promise<StoreCollection | null> {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+export async function getStoreCollection(
+  id: string,
+): Promise<StoreCollection | null> {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  )
+    return null;
   try {
     return await api<StoreCollection>(`/collections/${id}`);
   } catch (error) {
@@ -149,15 +227,46 @@ export async function getStoreCollection(id: string): Promise<StoreCollection | 
 
 /** Other products from the same category, newest first. */
 export async function related(p: Product, n = 8): Promise<Product[]> {
-  const r = await listProducts({ scope: { category: p.categorySlug ?? undefined }, limit: n + 1, revalidate: 60 });
+  const r = await listProducts({
+    scope: { category: p.categorySlug ?? undefined },
+    limit: n + 1,
+    revalidate: 60,
+  });
   return r.items.filter((x) => x.id !== p.id).slice(0, n);
 }
 
+/** The shop's written policies (portal Settings > Policies), sanitized HTML from the ERP; "" = not written. */
+export type Policies = Record<
+  "returns" | "privacy" | "terms" | "shipping",
+  string
+>;
+const NO_POLICIES: Policies = {
+  returns: "",
+  privacy: "",
+  terms: "",
+  shipping: "",
+};
+
+export const getPolicies = cache((): Promise<Policies> =>
+  api<Policies>("/policies", { revalidate: 60 }).catch(() => NO_POLICIES),
+);
+
 /** A storefront collection page (/c/<slug>): one of the shop's categories, or a craft / occasion value found on its products. */
-export type Collection = { slug: string; name: string; kind: "category" | "craft" | "occasion"; blurb: string; count: number };
+export type Collection = {
+  slug: string;
+  name: string;
+  kind: "category" | "craft" | "occasion";
+  blurb: string;
+  count: number;
+};
 
 type ApiCollections = {
-  categories: { slug: string; name: string; blurb: string | null; product_count: number }[];
+  categories: {
+    slug: string;
+    name: string;
+    blurb: string | null;
+    product_count: number;
+  }[];
   crafts: { slug: string; product_count: number }[];
   occasions: { slug: string; product_count: number }[];
 };
@@ -170,15 +279,37 @@ const titleOf = (slug: string) => slug.split("-").map(cap).join(" ");
 export const getCatalogue = cache(async (): Promise<Collection[]> => {
   const c = await api<ApiCollections>("/collections", { revalidate: 60 });
   const all: Collection[] = [
-    ...c.categories.map((x) => ({ slug: x.slug, name: x.name, kind: "category" as const, blurb: x.blurb ?? "", count: x.product_count })),
-    ...c.crafts.map((x) => ({ slug: x.slug, name: titleOf(x.slug), kind: "craft" as const, blurb: "", count: x.product_count })),
-    ...c.occasions.map((x) => ({ slug: x.slug, name: titleOf(x.slug), kind: "occasion" as const, blurb: "", count: x.product_count })),
+    ...c.categories.map((x) => ({
+      slug: x.slug,
+      name: x.name,
+      kind: "category" as const,
+      blurb: x.blurb ?? "",
+      count: x.product_count,
+    })),
+    ...c.crafts.map((x) => ({
+      slug: x.slug,
+      name: titleOf(x.slug),
+      kind: "craft" as const,
+      blurb: "",
+      count: x.product_count,
+    })),
+    ...c.occasions.map((x) => ({
+      slug: x.slug,
+      name: titleOf(x.slug),
+      kind: "occasion" as const,
+      blurb: "",
+      count: x.product_count,
+    })),
   ];
   const seen = new Set<string>();
-  return all.filter((x) => SLUG.test(x.slug) && !seen.has(x.slug) && !!seen.add(x.slug));
+  return all.filter(
+    (x) => SLUG.test(x.slug) && !seen.has(x.slug) && !!seen.add(x.slug),
+  );
 });
 
-export async function getCollection(slug: string): Promise<Collection | undefined> {
+export async function getCollection(
+  slug: string,
+): Promise<Collection | undefined> {
   return (await getCatalogue()).find((c) => c.slug === slug);
 }
 
@@ -189,9 +320,15 @@ export async function getCollection(slug: string): Promise<Collection | undefine
 export async function collectionCovers(): Promise<Record<string, string>> {
   const [catalogue, all] = await Promise.all([
     getCatalogue(),
-    api<Record<"categories" | "crafts" | "occasions", Record<string, string[]>>>("/collections/covers", { revalidate: 300 }),
+    api<
+      Record<"categories" | "crafts" | "occasions", Record<string, string[]>>
+    >("/collections/covers", { revalidate: 300 }),
   ]);
-  const kinds = { category: all.categories, craft: all.crafts, occasion: all.occasions } as const;
+  const kinds = {
+    category: all.categories,
+    craft: all.crafts,
+    occasion: all.occasions,
+  } as const;
   const used = new Set<string>();
   const out: Record<string, string> = {};
   catalogue.forEach((c) => {
@@ -222,9 +359,11 @@ export function distinct(list: Product[], n: number) {
 /** Round-robin across categories so rails don't show ten near-identical items in a row. */
 export function diverse(list: Product[]) {
   const groups = new Map<string, Product[]>();
-  list.forEach((p) => groups.set(p.category, [...(groups.get(p.category) ?? []), p]));
+  list.forEach((p) =>
+    groups.set(p.category, [...(groups.get(p.category) ?? []), p]),
+  );
   const out: Product[] = [];
-  for (let i = 0; out.length < list.length; i++) groups.forEach((g) => g[i] && out.push(g[i]));
+  for (let i = 0; out.length < list.length; i++)
+    groups.forEach((g) => g[i] && out.push(g[i]));
   return out;
 }
-

@@ -55,13 +55,19 @@ export const SORTS: { value: Filters["sort"]; label: string }[] = [
 type Params = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 const list = (v: string | string[] | undefined) =>
-  (one(v) ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  (one(v) ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
 export function parseFilters(sp: Params): Filters {
   const [lo, hi] = (one(sp.price) ?? "").split("-").map(Number);
   const sort = one(sp.sort) as Filters["sort"];
   return {
-    price: Number.isFinite(lo) && Number.isFinite(hi) && hi > 0 ? [lo, hi] : undefined,
+    price:
+      Number.isFinite(lo) && Number.isFinite(hi) && hi > 0
+        ? [lo, hi]
+        : undefined,
     colors: list(sp.color),
     crafts: list(sp.craft),
     inStock: one(sp.stock) === "1",
@@ -70,11 +76,28 @@ export function parseFilters(sp: Params): Filters {
 }
 
 const HEX: Record<string, string> = {
-  black: "#1c1c1c", white: "#ffffff", red: "#c0392b", pink: "#e58ca5", blue: "#334fb4",
-  green: "#2f7d4f", yellow: "#e8b923", orange: "#e6762b", purple: "#7a4a9c", maroon: "#6d1f2c",
-  beige: "#d8c3a5", cream: "#f2e6cf", gold: "#c9a961", grey: "#8a8a8a", gray: "#8a8a8a", brown: "#7a5a3a",
-  navy: "#1b2a5c", teal: "#1f7a7a", multi: "linear-gradient(135deg,#e58ca5,#e8b923,#334fb4)",
+  black: "#1c1c1c",
+  white: "#ffffff",
+  red: "#c0392b",
+  pink: "#e58ca5",
+  blue: "#334fb4",
+  green: "#2f7d4f",
+  yellow: "#e8b923",
+  orange: "#e6762b",
+  purple: "#7a4a9c",
+  maroon: "#6d1f2c",
+  beige: "#d8c3a5",
+  cream: "#f2e6cf",
+  gold: "#c9a961",
+  grey: "#8a8a8a",
+  gray: "#8a8a8a",
+  brown: "#7a5a3a",
+  navy: "#1b2a5c",
+  teal: "#1f7a7a",
+  multi: "linear-gradient(135deg,#e58ca5,#e8b923,#334fb4)",
 };
 /** Swatch colour for a colour name, whatever its case. */
 export const colorHex = (name: string) => HEX[name.toLowerCase()] ?? "#ccc";
-export const COLOR_HEX = new Proxy({} as Record<string, string>, { get: (_t, k) => (typeof k === "string" ? HEX[k.toLowerCase()] : undefined) });
+export const COLOR_HEX = new Proxy({} as Record<string, string>, {
+  get: (_t, k) => (typeof k === "string" ? HEX[k.toLowerCase()] : undefined),
+});

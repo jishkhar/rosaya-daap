@@ -13,7 +13,8 @@ import { getStorefront } from "@/themes/registry";
 /** Page titles, description and icon follow the store's brand settings (theme config, or the business's own name). */
 export async function generateMetadata(): Promise<Metadata> {
   const { brand, footer } = (await getStorefront()).config.settings;
-  const name = [brand.name, brand.tagline].filter(Boolean).join(" ") || "Online store";
+  const name =
+    [brand.name, brand.tagline].filter(Boolean).join(" ") || "Online store";
   return {
     metadataBase: new URL(await siteUrl()),
     title: { default: name, template: `%s | ${name}` },
@@ -24,12 +25,22 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = { themeColor: "#faf6f0" };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { config, status } = await getStorefront();
   return (
     <html lang="en">
       <body className="min-h-screen overflow-x-clip">
-        {status === "open" ? <Providers brand={config.settings.brand as Brand}>{children}</Providers> : <NoShop status={status} />}
+        {status === "open" ? (
+          <Providers brand={config.settings.brand as Brand}>
+            {children}
+          </Providers>
+        ) : (
+          <NoShop status={status} />
+        )}
       </body>
     </html>
   );

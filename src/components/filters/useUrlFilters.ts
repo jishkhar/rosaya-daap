@@ -16,12 +16,15 @@ export function useUrlFilters() {
       mutate(next);
       next.delete("page");
       const qs = next.toString();
-      start(() => router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false }));
+      start(() =>
+        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false }),
+      );
     },
     [sp, pathname, router],
   );
 
-  const getList = (key: string) => (sp.get(key) ?? "").split(",").filter(Boolean);
+  const getList = (key: string) =>
+    (sp.get(key) ?? "").split(",").filter(Boolean);
 
   const toggle = (key: string, value: string) =>
     push((p) => {
@@ -32,8 +35,12 @@ export function useUrlFilters() {
       else p.delete(key);
     });
 
-  const set = (key: string, value: string | null) => push((p) => (value ? p.set(key, value) : p.delete(key)));
-  const clearAll = () => push((p) => ["price", "color", "craft", "stock"].forEach((k) => p.delete(k)));
+  const set = (key: string, value: string | null) =>
+    push((p) => (value ? p.set(key, value) : p.delete(key)));
+  const clearAll = () =>
+    push((p) =>
+      ["price", "color", "craft", "stock"].forEach((k) => p.delete(k)),
+    );
 
   return { sp, pending, getList, toggle, set, clearAll };
 }

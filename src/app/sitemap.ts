@@ -8,20 +8,43 @@ export const dynamic = "force-dynamic";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const base = await siteUrl();
-  const statics = ["", "/shop", "/collections", "/c/new-arrivals", "/about", "/contact", "/help/shipping", "/help/returns", "/privacy", "/terms"].map((p) => ({ url: `${base}${p}`, lastModified: now }));
+  const statics = [
+    "",
+    "/shop",
+    "/collections",
+    "/c/new-arrivals",
+    "/about",
+    "/contact",
+    "/help/shipping",
+    "/help/returns",
+    "/privacy",
+    "/terms",
+  ].map((p) => ({ url: `${base}${p}`, lastModified: now }));
   const cols: MetadataRoute.Sitemap = [];
   const products: MetadataRoute.Sitemap = [];
   try {
-    (await getCatalogue()).forEach((c) => cols.push({ url: `${base}/c/${c.slug}`, lastModified: now }));
+    (await getCatalogue()).forEach((c) =>
+      cols.push({ url: `${base}/c/${c.slug}`, lastModified: now }),
+    );
     const custom = await getStoreCollections();
-    custom.forEach((c) => cols.push({ url: `${base}/c/${c.slug}`, lastModified: new Date(c.updated_at) }));
+    custom.forEach((c) =>
+      cols.push({
+        url: `${base}/c/${c.slug}`,
+        lastModified: new Date(c.updated_at),
+      }),
+    );
   } catch {
     // The ERP being unreachable leaves the static pages (and whatever collections were read before the failure).
   }
   try {
     for (let offset = 0; offset < 5000; offset += 100) {
       const page = await listProducts({ limit: 100, offset, revalidate: 3600 });
-      page.items.forEach((p) => products.push({ url: `${base}/p/${p.slug}`, lastModified: new Date(p.date) }));
+      page.items.forEach((p) =>
+        products.push({
+          url: `${base}/p/${p.slug}`,
+          lastModified: new Date(p.date),
+        }),
+      );
       if (offset + 100 >= page.total) break;
     }
   } catch {
