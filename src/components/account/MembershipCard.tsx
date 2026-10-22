@@ -1,5 +1,6 @@
 import { Award, Coins, Gift, Sparkles } from "lucide-react";
 import type { User } from "@/lib/auth";
+import { useBrand } from "@/lib/brand";
 import { formatINR } from "@/lib/money";
 
 const tiers = { new: "New", regular: "Regular", vip: "VIP", inactive: "Inactive" };
@@ -8,6 +9,7 @@ export function MembershipCard({ user }: { user: User }) {
   const loyalty = user.loyalty;
   const vip = user.segment === "vip";
   const tier = tiers[user.segment];
+  const { name } = useBrand();
 
   return (
     <aside aria-labelledby="membership-title" className="relative isolate mt-6 overflow-hidden rounded-2xl border border-[#c69b52]/40 bg-[linear-gradient(115deg,#211c1b_0%,#302022_65%,#44292b_100%)] px-4 py-3 text-[#fff5e5] shadow-[0_12px_35px_-18px_rgba(47,25,22,0.65)] sm:px-4 sm:py-3">
@@ -15,7 +17,7 @@ export function MembershipCard({ user }: { user: User }) {
       <h2 id="membership-title" className="sr-only">Your membership</h2>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="inline-flex items-center gap-2 rounded-full border border-[#e8bb6b]/15 bg-[#c89538]/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#e8bb6b]">
-          <Award aria-hidden="true" className="h-3.5 w-3.5" /> Rosaya Rewards Club
+          <Award aria-hidden="true" className="h-3.5 w-3.5" /> {name ? `${name} Rewards Club` : "Rewards Club"}
         </span>
         <div className="flex flex-wrap items-center gap-2">
           {loyalty && <p aria-label="Loyalty balance" className="text-lg font-semibold tabular-nums text-[#f2d7a5]">{loyalty.points.toLocaleString("en-IN")} <span className="text-xs font-normal text-[#d6c4be]">points</span></p>}

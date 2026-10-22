@@ -13,7 +13,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <h1 className="mb-8 font-heading text-3xl font-medium sm:text-4xl">
         {q ? <>Results for “{q}”</> : "Search"}
       </h1>
-      {q ? <Listing scope={{ q }} searchParams={sp} basePath="/search" /> : <p className="py-16 text-center text-ink-soft">Type something in the search box to find sarees, crafts and colours.</p>}
+      {q ? <Listing scope={{ q }} searchParams={sp} basePath="/search" /> : <p className="py-16 text-center text-ink-soft">Type something in the search box to find products.</p>}
     </div>
   );
 }

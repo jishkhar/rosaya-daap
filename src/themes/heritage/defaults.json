@@ -48,7 +48,8 @@
       "email": "",
       "copyright": "",
       "payments": []
-    }
+    },
+    "pages": { "about": "", "shipping": "", "returns": "", "care": "", "faq": "", "privacy": "", "terms": "" }
   },
   "templates": {
     "home": [

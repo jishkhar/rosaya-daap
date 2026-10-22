@@ -12,7 +12,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
         <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-taupe-dark">The full collection</p>
         <h1 className="font-heading text-4xl font-medium sm:text-5xl">Shop All</h1>
         <span className="mx-auto mt-4 block h-px w-12 bg-gold" aria-hidden />
-        <p className="mx-auto mt-4 max-w-xl text-ink-soft">Every handcrafted piece, in one place.</p>
+        <p className="mx-auto mt-4 max-w-xl text-ink-soft">Everything in the store, in one place.</p>
       </header>
       <Listing scope={{}} searchParams={await searchParams} basePath="/shop" />
     </div>

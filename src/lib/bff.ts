@@ -7,15 +7,19 @@ import { api, ApiError } from "@/lib/api";
  * Backend-for-frontend helpers: the browser only ever talks to this app's /api routes. They add the channel key
  * (never exposed), carry the customer session in an httpOnly cookie, and pass the ERP's answers (and errors) through.
  */
-export const SESSION_COOKIE = "rosaya_session";
+export const SESSION_COOKIE = "store_session";
+const LEGACY_SESSION_COOKIE = "rosaya_session"; // the name before the storefront served many shops; read until those sessions expire
 const WEEK = 7 * 24 * 3600;
 
 export async function sessionToken() {
-  return (await cookies()).get(SESSION_COOKIE)?.value ?? null;
+  const jar = await cookies();
+  return jar.get(SESSION_COOKIE)?.value ?? jar.get(LEGACY_SESSION_COOKIE)?.value ?? null;
 }
 
 export async function setSession(token: string, maxAge = WEEK) {
-  (await cookies()).set(SESSION_COOKIE, token, {
+  const jar = await cookies();
+  jar.delete(LEGACY_SESSION_COOKIE);
+  jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -25,7 +29,9 @@ export async function setSession(token: string, maxAge = WEEK) {
 }
 
 export async function clearSession() {
-  (await cookies()).delete(SESSION_COOKIE);
+  const jar = await cookies();
+  jar.delete(SESSION_COOKIE);
+  jar.delete(LEGACY_SESSION_COOKIE);
 }
 
 /** State-changing requests must come from this site (the cookie is SameSite=Lax, this is the second lock). */

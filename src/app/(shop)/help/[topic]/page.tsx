@@ -1,18 +1,24 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { InfoPage } from "@/components/ui/InfoPage";
+import { getStorefront } from "@/themes/registry";
 
-const TOPICS: Record<string, { title: string; body: string }> = {
-  shipping: { title: "Shipping & Delivery", body: "Ready-to-ship styles are dispatched within 24 hours and delivered in 5–6 business days. Shipping is free on every order." },
-  returns: { title: "Returns & Exchange", body: "Exchange within 7 days of delivery on unused items with tags intact. Handcrafted variations in weave and colour are not defects." },
-  faq: { title: "FAQs", body: "Questions about sizing, care or custom orders? Message us on WhatsApp and we'll help." },
+/** Help pages; their text is the shop's own (theme editor > Store pages). */
+const TOPICS: Record<string, { title: string; key: string }> = {
+  shipping: { title: "Shipping & Delivery", key: "shipping" },
+  returns: { title: "Returns & Exchange", key: "returns" },
+  faq: { title: "FAQs", key: "faq" },
 };
 
-export function generateStaticParams() {
-  return Object.keys(TOPICS).map((topic) => ({ topic }));
+type Props = { params: Promise<{ topic: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const t = TOPICS[(await params).topic];
+  return t ? { title: t.title } : {};
 }
 
-export default async function HelpPage({ params }: { params: Promise<{ topic: string }> }) {
+export default async function HelpPage({ params }: Props) {
   const t = TOPICS[(await params).topic];
   if (!t) notFound();
-  return <InfoPage title={t.title}><p>{t.body}</p></InfoPage>;
+  return <InfoPage title={t.title} text={(await getStorefront()).config.settings.pages[t.key] as string} />;
 }

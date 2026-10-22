@@ -71,8 +71,19 @@ type Ctx = {
 };
 
 const CartContext = createContext<Ctx | null>(null);
-const KEY = "rosaya.cart.v2";
-const COUPON_KEY = "rosaya.coupon.v2";
+const KEY = "store.cart.v2";
+const COUPON_KEY = "store.coupon.v2";
+// Names before the storefront served many shops: a guest bag saved under them moves over once.
+const LEGACY_KEYS: [string, string][] = [["rosaya.cart.v2", KEY], ["rosaya.coupon.v2", COUPON_KEY]];
+
+function adoptLegacyStorage() {
+  for (const [old, key] of LEGACY_KEYS) {
+    const value = localStorage.getItem(old);
+    if (value === null) continue;
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, value);
+    localStorage.removeItem(old);
+  }
+}
 const MAX_QTY = 10;
 
 const payloadOf = (items: CartItem[], code: string | null) => ({
@@ -112,6 +123,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       let guest: CartItem[] = [];
       let guestCoupon: string | null = null;
       try {
+        adoptLegacyStorage();
         const parsed = JSON.parse(localStorage.getItem(KEY) || "[]");
         if (Array.isArray(parsed)) guest = parsed.filter((i) => i && typeof i.variantId === "string" && Number.isInteger(i.qty) && i.qty > 0);
         guestCoupon = localStorage.getItem(COUPON_KEY);

@@ -62,7 +62,7 @@ export function Header({ collections, settings }: { collections: StoreCollection
       </div>
 
       {mobile && <MobileMenu collections={headerCollections} onClose={() => setMobile(false)} />}
-      {search && <SearchOverlay onClose={() => setSearch(false)} />}
+      {search && <SearchOverlay suggestions={[...new Set([...headerCollections, ...collections].map((c) => c.name))].slice(0, 6)} onClose={() => setSearch(false)} />}
     </header>
   );
 }

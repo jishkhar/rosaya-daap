@@ -11,6 +11,8 @@ import { colorHex } from "@/lib/catalog";
 import { siteUrl } from "@/lib/site";
 import { getProduct, related } from "@/lib/store";
 import { descriptionText } from "@/lib/richText";
+import { getStorefront } from "@/themes/registry";
+import type { Values } from "@/themes/schema";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -19,11 +21,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return p ? { title: p.title, description: descriptionText(p.desc).slice(0, 155), alternates: { canonical: `/p/${p.slug}` }, openGraph: { images: [p.images[0]] } } : {};
 }
 
-const ACCORDIONS = (desc: string) => [
-  { title: "Product details", body: desc || "Handcrafted by skilled artisans. Slight variations in colour and weave are the mark of handmade work." },
-  { title: "Care instructions", body: "Dry clean recommended. Store folded in a muslin cloth, away from direct sunlight. Iron on low heat on the reverse side." },
-  { title: "Shipping & returns", body: "Ready-to-ship styles are dispatched within 24 hours and delivered in 5–6 business days. Free shipping on every order. Exchange within 7 days of delivery on unused items with tags intact." },
-];
+/** The description, then the shop's own care and shipping/returns text (theme editor > Store pages); empty ones are left out. */
+const accordions = (desc: string, pages: Values) => [
+  { title: "Product details", body: desc, html: /<[a-z][^>]*>/i.test(desc) },
+  { title: "Care instructions", body: (pages.care as string).trim(), html: false },
+  { title: "Shipping & returns", body: [pages.shipping as string, pages.returns as string].map((t) => t.trim()).filter(Boolean).join("\n\n"), html: false },
+].filter((a) => a.body);
 
 export default async function ProductPage({ params }: Props) {
   const p = await getProduct((await params).slug);
@@ -71,12 +74,12 @@ export default async function ProductPage({ params }: Props) {
           <div className="mt-6"><PurchasePanel p={p} /></div>
 
           <div className="mt-8 border-t border-line">
-            {ACCORDIONS(p.desc).map((a, i) => (
+            {accordions(p.desc, (await getStorefront()).config.settings.pages).map((a, i) => (
               <details key={a.title} open={i === 0} className="group border-b border-line py-4">
                 <summary className="flex cursor-pointer list-none items-center justify-between font-heading text-base uppercase tracking-[0.12em]">
                   {a.title}<span className="text-xl leading-none transition-transform group-open:rotate-45">+</span>
                 </summary>
-                {i === 0 && /<[a-z][^>]*>/i.test(a.body) ? <div className="rich-description pt-3 text-sm leading-relaxed text-ink-soft" dangerouslySetInnerHTML={{ __html: a.body }} /> : <p className="whitespace-pre-wrap pt-3 text-sm leading-relaxed text-ink-soft">{a.body}</p>}
+                {a.html ? <div className="rich-description pt-3 text-sm leading-relaxed text-ink-soft" dangerouslySetInnerHTML={{ __html: a.body }} /> : <p className="whitespace-pre-wrap pt-3 text-sm leading-relaxed text-ink-soft">{a.body}</p>}
               </details>
             ))}
           </div>

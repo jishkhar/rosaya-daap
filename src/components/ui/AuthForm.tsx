@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useBrand } from "@/lib/brand";
 import { Button } from "@/components/ui/Button";
 
 const input = "h-12 w-full rounded-xl border border-line bg-white px-4 text-sm outline-none focus:border-ink";
@@ -22,6 +23,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const { login, register: signUp } = useAuth();
+  const brand = useBrand();
   const router = useRouter();
   // Only same-site paths: never bounce a shopper to an address a link smuggled in.
   const params = useSearchParams();
@@ -86,7 +88,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       </form>
 
       <p className="mt-6 text-center text-sm text-ink-soft">
-        {register ? <>Already have an account? <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="text-ink underline underline-offset-4">Log in</Link></> : <>New to Rosaya? <Link href={next ? `/register?next=${encodeURIComponent(next)}` : "/register"} className="text-ink underline underline-offset-4">Create an account</Link></>}
+        {register ? <>Already have an account? <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="text-ink underline underline-offset-4">Log in</Link></> : <>New to {brand.name || "our store"}? <Link href={next ? `/register?next=${encodeURIComponent(next)}` : "/register"} className="text-ink underline underline-offset-4">Create an account</Link></>}
       </p>
     </div>
   );

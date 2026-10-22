@@ -20,8 +20,8 @@ export type Field =
 
 export type SectionSchema = { type: string; name: string; fields: Field[] };
 
-/** Fixed setting groups every theme has (rendered on every page), plus the section types its page templates can use. */
-export const GROUPS = ["brand", "announcement", "header", "footer"] as const;
+/** Fixed setting groups every theme has (shared by every page), plus the section types its page templates can use. */
+export const GROUPS = ["brand", "announcement", "header", "footer", "pages"] as const;
 export type Group = (typeof GROUPS)[number];
 export type ThemeSchema = { settings: Record<Group, Field[]>; sections: SectionSchema[] };
 

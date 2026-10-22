@@ -54,6 +54,15 @@ export const schema: ThemeSchema = {
       { key: "copyright", type: "text", label: "Copyright name", default: "", max: 80, help: "Shown after © and the year. Leave empty to use your business name." },
       { key: "payments", type: "list", label: "Payment badges", max: 8, itemLabel: "Badge", fields: [{ key: "label", type: "text", label: "Badge", max: 20 }], default: [] },
     ],
+    pages: [
+      { key: "about", type: "textarea", label: "About us", default: "", max: 4000, help: "The About page. Leave a blank line between paragraphs." },
+      { key: "shipping", type: "textarea", label: "Shipping & delivery", default: "", max: 2000, help: "The shipping help page, and under \"Shipping & returns\" on every product." },
+      { key: "returns", type: "textarea", label: "Returns & exchanges", default: "", max: 2000, help: "The returns help page, and under \"Shipping & returns\" on every product." },
+      { key: "care", type: "textarea", label: "Care instructions", default: "", max: 1000, help: "Shown on every product page. Leave empty to hide it." },
+      { key: "faq", type: "textarea", label: "FAQs", default: "", max: 4000 },
+      { key: "privacy", type: "textarea", label: "Privacy policy", default: "", max: 8000 },
+      { key: "terms", type: "textarea", label: "Terms of service", default: "", max: 8000 },
+    ],
   },
   sections: [
     {

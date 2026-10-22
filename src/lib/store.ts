@@ -1,6 +1,6 @@
 import "server-only";
+import { cache } from "react";
 import { api } from "@/lib/api";
-import { byKind, collections, getCollection, type Collection } from "@/content/site";
 import { parseFilters, type Product, type Variant } from "@/lib/catalog";
 
 /* ---------- API shapes (money in paise) ---------- */
@@ -153,13 +153,33 @@ export async function related(p: Product, n = 8): Promise<Product[]> {
   return r.items.filter((x) => x.id !== p.id).slice(0, n);
 }
 
-export async function collectionCounts(): Promise<Record<string, number>> {
-  const c = await api<{
-    categories: { slug: string; product_count: number }[];
-    crafts: { slug: string; product_count: number }[];
-    occasions: { slug: string; product_count: number }[];
-  }>("/collections", { revalidate: 60 });
-  return Object.fromEntries([...c.categories, ...c.crafts, ...c.occasions].map((x) => [x.slug, x.product_count]));
+/** A storefront collection page (/c/<slug>): one of the shop's categories, or a craft / occasion value found on its products. */
+export type Collection = { slug: string; name: string; kind: "category" | "craft" | "occasion"; blurb: string; count: number };
+
+type ApiCollections = {
+  categories: { slug: string; name: string; blurb: string | null; product_count: number }[];
+  crafts: { slug: string; product_count: number }[];
+  occasions: { slug: string; product_count: number }[];
+};
+
+const SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/;
+const titleOf = (slug: string) => slug.split("-").map(cap).join(" ");
+
+/** This shop's collections, from its own catalogue (once per request; the API answer is cached a minute). A slug used twice keeps
+ * the first: categories, then crafts, then occasions. Values that are not URL-safe slugs get no page (they still work as filters). */
+export const getCatalogue = cache(async (): Promise<Collection[]> => {
+  const c = await api<ApiCollections>("/collections", { revalidate: 60 });
+  const all: Collection[] = [
+    ...c.categories.map((x) => ({ slug: x.slug, name: x.name, kind: "category" as const, blurb: x.blurb ?? "", count: x.product_count })),
+    ...c.crafts.map((x) => ({ slug: x.slug, name: titleOf(x.slug), kind: "craft" as const, blurb: "", count: x.product_count })),
+    ...c.occasions.map((x) => ({ slug: x.slug, name: titleOf(x.slug), kind: "occasion" as const, blurb: "", count: x.product_count })),
+  ];
+  const seen = new Set<string>();
+  return all.filter((x) => SLUG.test(x.slug) && !seen.has(x.slug) && !!seen.add(x.slug));
+});
+
+export async function getCollection(slug: string): Promise<Collection | undefined> {
+  return (await getCatalogue()).find((c) => c.slug === slug);
 }
 
 /**
@@ -167,17 +187,19 @@ export async function collectionCounts(): Promise<Record<string, number>> {
  * so tiles on the landing page and in the mega-menu don't repeat the same picture.
  */
 export async function collectionCovers(): Promise<Record<string, string>> {
+  const [catalogue, all] = await Promise.all([
+    getCatalogue(),
+    api<Record<"categories" | "crafts" | "occasions", Record<string, string[]>>>("/collections/covers", { revalidate: 300 }),
+  ]);
+  const kinds = { category: all.categories, craft: all.crafts, occasion: all.occasions } as const;
   const used = new Set<string>();
   const out: Record<string, string> = {};
-  const picks = await Promise.all(
-    collections.map((c) => listProducts({ scope: scopeOf(c), limit: 8, revalidate: 300 }).then((r) => r.items.filter((p) => p.inStock))),
-  );
-  collections.forEach((c, i) => {
-    const list = picks[i];
-    const pick = list.find((p) => !used.has(p.images[0])) ?? list[0];
+  catalogue.forEach((c) => {
+    const list = kinds[c.kind]?.[c.slug] ?? [];
+    const pick = list.find((img) => !used.has(img)) ?? list[0];
     if (pick) {
-      used.add(pick.images[0]);
-      out[c.slug] = pick.images[0];
+      used.add(pick);
+      out[c.slug] = pick;
     }
   });
   return out;
@@ -206,4 +228,3 @@ export function diverse(list: Product[]) {
   return out;
 }
 
-export { byKind, getCollection };

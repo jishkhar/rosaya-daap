@@ -13,14 +13,14 @@ test("signed-out shoppers cannot open checkout or submit an order", async ({ pag
 });
 
 test("an invalid session cookie cannot open checkout or submit an order", async ({ page, baseURL }) => {
-  await page.context().addCookies([{ name: "rosaya_session", value: "invalid-session", url: baseURL! }]);
+  await page.context().addCookies([{ name: "store_session", value: "invalid-session", url: baseURL! }]);
   await page.goto("/checkout");
   await expect(page).toHaveURL(/\/login\?next=\/checkout$/);
   // Restore the invalid cookie because /api/me may have cleared it during login-page hydration.
-  await page.context().addCookies([{ name: "rosaya_session", value: "invalid-session", url: baseURL! }]);
+  await page.context().addCookies([{ name: "store_session", value: "invalid-session", url: baseURL! }]);
   const response = await page.request.post("/api/checkout", { data: {} });
   expect(response.status()).toBe(401);
-  expect((await page.context().cookies()).some((cookie) => cookie.name === "rosaya_session")).toBe(false);
+  expect((await page.context().cookies()).some((cookie) => cookie.name === "store_session")).toBe(false);
 });
 
 test("registration and login return to checkout with the guest bag intact", async ({ page }) => {

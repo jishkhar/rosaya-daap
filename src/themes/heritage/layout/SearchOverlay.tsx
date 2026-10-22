@@ -13,9 +13,8 @@ type Result = {
   collections: { slug: string; name: string }[];
 };
 
-const POPULAR = ["Silk saree", "Bandhani", "Lehenga", "Ajrakh", "Garba", "Dupatta"];
-
-export function SearchOverlay({ onClose }: { onClose: () => void }) {
+/** `suggestions`: quick searches shown before typing (the shop's own collection names). */
+export function SearchOverlay({ suggestions, onClose }: { suggestions: string[]; onClose: () => void }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [res, setRes] = useState<Result | null>(null);
@@ -70,7 +69,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
               ref={input}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search sarees, crafts, colours…"
+              placeholder="Search products…"
               className="w-full bg-transparent text-lg outline-none placeholder:text-ink-soft/70"
               aria-label="Search products"
             />
@@ -80,10 +79,10 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
           </form>
 
           {!live ? (
-            <div className="py-6">
+            suggestions.length > 0 && <div className="py-6">
               <p className="mb-3 text-xs font-medium uppercase tracking-[0.15em] text-ink-soft">Popular searches</p>
               <div className="flex flex-wrap gap-2">
-                {POPULAR.map((t) => (
+                {suggestions.map((t) => (
                   <button key={t} onClick={() => go(t)} className="rounded-full border border-line bg-white px-4 py-1.5 text-sm hover:border-ink">
                     {t}
                   </button>
@@ -91,7 +90,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           ) : live.products.length === 0 && live.collections.length === 0 ? (
-            <p className="py-8 text-center text-ink-soft">No matches for “{q}”. Try “saree” or “bandhani”.</p>
+            <p className="py-8 text-center text-ink-soft">No matches for “{q}”. Try a different word.</p>
           ) : (
             <div className="py-4">
               {live.collections.length > 0 && (

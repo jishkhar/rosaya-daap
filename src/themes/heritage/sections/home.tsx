@@ -4,9 +4,8 @@ import { ArrowRight, BadgeCheck, Tag, Truck } from "lucide-react";
 import { CollectionTiles } from "@/components/home/CollectionTiles";
 import { ProductRail } from "@/components/home/ProductRail";
 import { Section } from "@/components/home/Section";
-import { getCollection, type Collection } from "@/content/site";
 import type { Product } from "@/lib/catalog";
-import { collectionCounts, collectionCovers, getStoreCollections, distinct, diverse, listProducts, NEW_ARRIVALS, scopeOf, type StoreCollection } from "@/lib/store";
+import { collectionCovers, getCatalogue, getCollection, getStoreCollections, distinct, diverse, listProducts, NEW_ARRIVALS, scopeOf, type Collection, type StoreCollection } from "@/lib/store";
 import { Newsletter } from "@/themes/heritage/layout/Newsletter";
 import { Hero, type HeroImages, type HeroSlide } from "@/themes/heritage/sections/Hero";
 import type { Values } from "@/themes/schema";
@@ -15,20 +14,17 @@ import type { SectionDef } from "@/themes/types";
 const ICONS = { truck: Truck, badge: BadgeCheck, tag: Tag };
 
 const IN_STOCK = { stock: "1" };
-const peek = (slug: string, n: number) => {
-  const c = getCollection(slug);
-  return c ? listProducts({ scope: scopeOf(c), searchParams: IN_STOCK, limit: 24, revalidate: 60 }).then((r) => distinct(r.items, n)) : Promise.resolve([]);
+const peek = async (slug: string, n: number) => {
+  const c = await getCollection(slug);
+  return c ? listProducts({ scope: scopeOf(c), searchParams: IN_STOCK, limit: 24, revalidate: 60 }).then((r) => distinct(r.items, n)) : [];
 };
 const newest = () => listProducts({ scope: NEW_ARRIVALS, searchParams: IN_STOCK, limit: 40, revalidate: 60 }).then((r) => diverse(r.items).slice(0, 10));
 
 // Settings arrive validated (resolveConfig), so every schema key is present with its declared type.
 const str = (s: Values, key: string) => s[key] as string;
 const opt = (s: Values, key: string) => (s[key] as string) || undefined;
-/** The collections a section points at, in the tenant's order; slugs that no longer exist are skipped. */
-const picked = (s: Values, key = "collections") => (s[key] as string[]).map(getCollection).filter((c): c is Collection => !!c);
-
-type Covers = { covers: Record<string, string>; counts: Record<string, number> };
-const coverOf = (d: Covers | undefined, slug: string) => d?.covers[slug] ?? "/placeholder.svg";
+type Covers = { list: Collection[]; covers: Record<string, string> };
+const coverOf = (d: Covers, slug: string) => d.covers[slug] ?? "/placeholder.svg";
 
 const slidesOf = (s: Values) => s.slides as HeroSlide[];
 
@@ -74,22 +70,23 @@ export const productRail: SectionDef<Product[]> = {
   ),
 };
 
-const loadCovers = async (): Promise<Covers> => {
-  const [covers, counts] = await Promise.allSettled([collectionCovers(), collectionCounts()]);
-  if (covers.status === "rejected" && counts.status === "rejected") throw covers.reason;
-  return { covers: covers.status === "fulfilled" ? covers.value : {}, counts: counts.status === "fulfilled" ? counts.value : {} };
+/** The shop's collections a section points at, in the tenant's order (slugs the shop no longer has are skipped), with cover pictures. */
+const loadCovers = async (s: Values): Promise<Covers> => {
+  const [catalogue, covers] = await Promise.all([getCatalogue(), collectionCovers().catch(() => ({}))]);
+  const list = (s.collections as string[]).map((slug) => catalogue.find((c) => c.slug === slug)).filter((c): c is Collection => !!c);
+  return { list, covers };
 };
 
 export const categoryCircles: SectionDef<Covers> = {
   load: loadCovers,
   Component: ({ settings, data }) => {
-    const list = picked(settings);
-    if (!list.length) return null;
+    if (!data?.list.length) return null;
+    const list = data.list;
     return (
       <Section eyebrow={opt(settings, "eyebrow")} title={str(settings, "title")} href={opt(settings, "href")} linkLabel={opt(settings, "link_label")}>
         <ul className="grid grid-cols-4 gap-x-3 gap-y-8 sm:gap-x-5 lg:grid-cols-8">
           {list.map((c) => {
-            const n = data?.counts[c.slug];
+            const n = c.count;
             return (
               <li key={c.slug}>
                 <Link href={`/c/${c.slug}`} className="group flex flex-col items-center text-center">
@@ -97,7 +94,7 @@ export const categoryCircles: SectionDef<Covers> = {
                     <Image src={coverOf(data, c.slug)} alt="" fill sizes="(min-width:1024px) 12vw, 22vw" className="object-cover transition-transform duration-700 group-hover:scale-110" />
                   </span>
                   <span className="mt-4 font-heading text-sm sm:text-lg">{c.name}</span>
-                  {n !== undefined && <span className="text-[11px] text-ink-soft sm:text-xs">{n} {n === 1 ? "style" : "styles"}</span>}
+                  <span className="text-[11px] text-ink-soft sm:text-xs">{n} {n === 1 ? "product" : "products"}</span>
                 </Link>
               </li>
             );
@@ -111,8 +108,8 @@ export const categoryCircles: SectionDef<Covers> = {
 export const occasions: SectionDef<Covers> = {
   load: loadCovers,
   Component: ({ settings, data }) => {
-    const list = picked(settings);
-    if (!list.length) return null;
+    if (!data?.list.length) return null;
+    const list = data.list;
     return (
       <Section eyebrow={opt(settings, "eyebrow")} title={str(settings, "title")}>
         <ul className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-5 sm:gap-5 sm:overflow-visible sm:px-0">
@@ -123,7 +120,7 @@ export const occasions: SectionDef<Covers> = {
                   <Image src={coverOf(data, c.slug)} alt="" fill sizes="(min-width:640px) 18vw, 150px" className="object-cover transition-transform duration-700 group-hover:scale-105" />
                 </div>
                 <p className="mt-4 font-heading text-lg">{c.name}</p>
-                <p className="text-xs text-ink-soft">{c.blurb}</p>
+                {c.blurb ? <p className="text-xs text-ink-soft">{c.blurb}</p> : null}
               </Link>
             </li>
           ))}
@@ -136,8 +133,8 @@ export const occasions: SectionDef<Covers> = {
 export const crafts: SectionDef<Covers> = {
   load: loadCovers,
   Component: ({ settings, data }) => {
-    const list = picked(settings);
-    if (!list.length) return null;
+    if (!data?.list.length) return null;
+    const list = data.list;
     return (
       <section className="mt-16 bg-ink py-16 text-cream sm:mt-24 sm:py-24">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6">
@@ -154,7 +151,7 @@ export const crafts: SectionDef<Covers> = {
                   <span className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/10 to-transparent" />
                   <span className="absolute inset-x-0 bottom-0 p-4 sm:p-6">
                     <span className="block font-heading text-2xl sm:text-3xl">{c.name}</span>
-                    <span className="mt-1 hidden text-sm text-cream/75 sm:block">{c.blurb}</span>
+                    {c.blurb ? <span className="mt-1 hidden text-sm text-cream/75 sm:block">{c.blurb}</span> : null}
                     {settings.link_label ? <span className="mt-3 inline-block border-b border-gold pb-0.5 text-sm text-gold">{str(settings, "link_label")} →</span> : null}
                   </span>
                 </Link>
@@ -174,7 +171,7 @@ export const promise: SectionDef<undefined> = {
   Component: ({ settings }) => {
     const items = settings.items as Promise_[];
     return (
-      <section className="mx-auto max-w-[1400px] px-4 pt-16 sm:px-6 sm:pt-24" aria-labelledby="why-rosaya">
+      <section className="mx-auto max-w-[1400px] px-4 pt-16 sm:px-6 sm:pt-24" aria-labelledby="promise-title">
         <div className="relative grid overflow-hidden rounded-[2rem] bg-sand lg:grid-cols-[1fr_1.5fr]">
           <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-gold/20 blur-3xl" aria-hidden />
 
@@ -184,7 +181,7 @@ export const promise: SectionDef<undefined> = {
                 <span className="h-px w-10 bg-gold" aria-hidden /> {str(settings, "eyebrow")}
               </p>
             ) : null}
-            <h2 id="why-rosaya" className="font-heading text-3xl font-medium leading-[1.15] sm:text-4xl lg:text-[2.6rem]">
+            <h2 id="promise-title" className="font-heading text-3xl font-medium leading-[1.15] sm:text-4xl lg:text-[2.6rem]">
               {str(settings, "title")} {settings.title_accent ? <span className="text-taupe-dark">{str(settings, "title_accent")}</span> : null}
             </h2>
             {settings.text ? <p className="mt-5 max-w-sm text-ink-soft">{str(settings, "text")}</p> : null}

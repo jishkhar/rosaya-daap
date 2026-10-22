@@ -104,3 +104,19 @@ test('empty identity fields come from the business', () => {
   assert.equal(unsafe.settings.brand.logo, '');
   assert.equal(withIdentity(resolveConfig(schema, null, defaults), undefined).settings.brand.name, '');
 });
+
+test('storefront code shows no shop-specific text (every shop shares it)', () => {
+  const offenders = [];
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) return walk(p);
+    if (!/\.(ts|tsx)$/.test(e.name)) return;
+    fs.readFileSync(p, 'utf8').split('\n').forEach((line, i) => {
+      const code = line.replace(/\/\/.*$/, '').trim();
+      if (code.startsWith('*') || code.startsWith('/*') || /LEGACY|"rosaya\.(cart|coupon)\.v2"|"rosaya_session"/.test(code)) return; // comments, old storage names
+      if (/rosaya|saree|lehenga|garba|kalamkari|ajrakh|bandhani|handcraft/i.test(code)) offenders.push(`${path.relative(process.cwd(), p)}:${i + 1}`);
+    });
+  });
+  walk(fileURLToPath(new URL('../src', import.meta.url)));
+  assert.deepEqual(offenders, []);
+});
