@@ -1,4 +1,5 @@
-import { getStoreCollections } from "@/lib/store";
+import { policyLinks } from "@/lib/policies";
+import { getPolicies, getStoreCollections } from "@/lib/store";
 import { getStorefront } from "@/themes/registry";
 import type { Values } from "@/themes/schema";
 import type { Theme } from "@/themes/types";
@@ -27,8 +28,17 @@ async function StoreFooter({
   theme: Theme;
   settings: Values;
 }) {
-  const collections = await getStoreCollections().catch(() => []);
-  return <theme.Footer collections={collections} settings={settings} />;
+  const [collections, policies] = await Promise.all([
+    getStoreCollections().catch(() => []),
+    getPolicies(),
+  ]);
+  return (
+    <theme.Footer
+      collections={collections}
+      settings={settings}
+      policyLinks={policyLinks(policies)}
+    />
+  );
 }
 
 /** Render the page immediately; catalogue decoration must not block the bag or account pages. */
@@ -63,7 +73,11 @@ export default async function ShopLayout({
         <StoreHeader theme={theme} settings={header} />
       </Suspense>
       <main id="main">{children}</main>
-      <Suspense fallback={<theme.Footer collections={[]} settings={footer} />}>
+      <Suspense
+        fallback={
+          <theme.Footer collections={[]} settings={footer} policyLinks={[]} />
+        }
+      >
         <StoreFooter theme={theme} settings={footer} />
       </Suspense>
     </>

@@ -10,6 +10,7 @@ import {
   type StoreIdentity,
   type ThemeConfig,
 } from "@/themes/schema";
+import type { Shipping } from "@/lib/shipping";
 import type { Theme } from "@/themes/types";
 
 export const themes: Record<string, Theme> = { heritage };
@@ -21,7 +22,10 @@ type StoreTheme = {
   config: unknown;
   version: number | null;
   preview: boolean;
-  store?: StoreIdentity;
+  store?: StoreIdentity & {
+    primary_host?: string | null;
+    shipping?: Shipping;
+  };
 };
 
 /**
@@ -37,6 +41,10 @@ export const getStorefront = cache(
     config: ThemeConfig;
     preview: boolean;
     status: ShopStatus;
+    /** The shop's primary address (its connected custom domain, else its platform address); null when unknown. */
+    primaryHost: string | null;
+    /** The shop's delivery fee and time; null when unknown. */
+    shipping: Shipping | null;
   }> => {
     const token = (await cookies()).get(PREVIEW_COOKIE)?.value;
     let data: StoreTheme | null = null;
@@ -64,6 +72,8 @@ export const getStorefront = cache(
       config: withIdentity(config, data?.store),
       preview: !!(known && data?.preview),
       status,
+      primaryHost: data?.store?.primary_host ?? null,
+      shipping: data?.store?.shipping ?? null,
     };
   },
 );

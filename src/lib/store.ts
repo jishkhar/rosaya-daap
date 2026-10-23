@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { api } from "@/lib/api";
+import { NO_POLICIES, type Policies } from "@/lib/policies";
 import { parseFilters, type Product, type Variant } from "@/lib/catalog";
 
 /* ---------- API shapes (money in paise) ---------- */
@@ -235,18 +236,7 @@ export async function related(p: Product, n = 8): Promise<Product[]> {
   return r.items.filter((x) => x.id !== p.id).slice(0, n);
 }
 
-/** The shop's written policies (portal Settings > Policies), sanitized HTML from the ERP; "" = not written. */
-export type Policies = Record<
-  "returns" | "privacy" | "terms" | "shipping",
-  string
->;
-const NO_POLICIES: Policies = {
-  returns: "",
-  privacy: "",
-  terms: "",
-  shipping: "",
-};
-
+/** The shop's written policies, sanitized HTML from the ERP; "" = not written (lib/policies.ts says where each is shown). */
 export const getPolicies = cache((): Promise<Policies> =>
   api<Policies>("/policies", { revalidate: 60 }).catch(() => NO_POLICIES),
 );

@@ -25,7 +25,12 @@ export type Theme = {
   defaults: unknown;
   AnnouncementBar: ComponentType<{ settings: Values }>;
   Header: ComponentType<{ collections: StoreCollection[]; settings: Values }>;
-  Footer: ComponentType<{ collections: StoreCollection[]; settings: Values }>;
+  /** `policyLinks`: the shop's written policies (Settings > Policies); a footer links the ones its own columns do not. */
+  Footer: ComponentType<{
+    collections: StoreCollection[];
+    settings: Values;
+    policyLinks: { label: string; href: string }[];
+  }>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each section type has its own data shape
   sections: Record<string, SectionDef<any>>;
 };

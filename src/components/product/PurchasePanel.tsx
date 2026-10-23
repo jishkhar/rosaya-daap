@@ -7,11 +7,14 @@ import type { Product } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
 import { call } from "@/lib/http";
 import { formatINR } from "@/lib/money";
+import { daysText, feeText } from "@/lib/shipping";
+import { useShipping } from "@/lib/shippingContext";
 import { Qty } from "@/components/cart/CartDrawer";
 import { Button } from "@/components/ui/Button";
 
 export function PurchasePanel({ p }: { p: Product }) {
   const { add, setOpen, ready } = useCart();
+  const shipping = useShipping();
   const router = useRouter();
   const multi = p.variants.length > 1;
   // One variant needs no choosing; several (sizes) must be picked before the bag.
@@ -71,7 +74,17 @@ export function PurchasePanel({ p }: { p: Product }) {
     if (!r.ok) return setPinMsg({ ok: false, text: r.error });
     setPinMsg(
       r.data.serviceable
-        ? { ok: true, text: "Delivery in 5–6 business days · Free shipping" }
+        ? {
+            ok: true,
+            text: [
+              daysText(shipping)
+                ? `Delivery in ${daysText(shipping)}`
+                : "We deliver to this pincode",
+              feeText(shipping),
+            ]
+              .filter(Boolean)
+              .join(" · "),
+          }
         : { ok: false, text: "Sorry, we don't deliver to this pincode yet." },
     );
   };
@@ -159,11 +172,15 @@ export function PurchasePanel({ p }: { p: Product }) {
         </Button>
       )}
 
-      <ul className="mt-6 grid grid-cols-3 gap-2 text-center text-[11px] text-ink-soft">
-        <li className="rounded-xl bg-sand/70 px-2 py-3">
-          <Truck className="mx-auto mb-1 h-5 w-5 text-taupe-dark" />
-          Ships in 24h
-        </li>
+      <ul
+        className={`mt-6 grid ${daysText(shipping) ? "grid-cols-3" : "grid-cols-2"} gap-2 text-center text-[11px] text-ink-soft`}
+      >
+        {daysText(shipping) && (
+          <li className="rounded-xl bg-sand/70 px-2 py-3">
+            <Truck className="mx-auto mb-1 h-5 w-5 text-taupe-dark" />
+            Arrives in {daysText(shipping)}
+          </li>
+        )}
         <li className="rounded-xl bg-sand/70 px-2 py-3">
           <RotateCcw className="mx-auto mb-1 h-5 w-5 text-taupe-dark" />
           Easy exchange

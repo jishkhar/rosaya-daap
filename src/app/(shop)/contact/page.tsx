@@ -1,18 +1,32 @@
 import { InfoPage } from "@/components/ui/InfoPage";
+import { getPolicies } from "@/lib/store";
 import { getStorefront } from "@/themes/registry";
 
 export const metadata = { title: "Contact" };
 
-/** The shop's contact lines from its footer settings (email falls back to the business email). */
+/**
+ * The shop's "Contact information" policy (Settings > Policies), then its contact lines from the footer settings (email falls back to
+ * the business email).
+ */
 export default async function Page() {
-  const { footer } = (await getStorefront()).config.settings;
+  const [{ footer }, policies] = await Promise.all([
+    getStorefront().then((s) => s.config.settings),
+    getPolicies(),
+  ]);
   const email = footer.email as string;
   const lines = [footer.address as string, footer.phone as string].filter(
     Boolean,
   );
-  if (!email && !lines.length) return <InfoPage title="Contact" />;
+  if (!policies.contact && !email && !lines.length)
+    return <InfoPage title="Contact" />;
   return (
     <InfoPage title="Contact">
+      {policies.contact && (
+        <div
+          className="rich-description"
+          dangerouslySetInnerHTML={{ __html: policies.contact }}
+        />
+      )}
       {email && (
         <p>
           Email:{" "}
