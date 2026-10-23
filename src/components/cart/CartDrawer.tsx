@@ -9,6 +9,7 @@ import { useCart } from "@/lib/cart";
 import { formatINR } from "@/lib/money";
 import { FreeShippingBar } from "@/components/cart/FreeShippingBar";
 import { ButtonLink } from "@/components/ui/Button";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
 export function CartDrawer() {
   const {
@@ -22,6 +23,7 @@ export function CartDrawer() {
     storageError,
   } = useCart();
   const pathname = usePathname();
+  useBodyScrollLock(open);
 
   // Safety net: any navigation (e.g. the buy-it-now redirect) dismisses the drawer.
   useEffect(() => setOpen(false), [pathname, setOpen]);
@@ -30,10 +32,8 @@ export function CartDrawer() {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
     };
   }, [open, setOpen]);
 
@@ -53,14 +53,14 @@ export function CartDrawer() {
         onClick={close}
       />
       <aside className="animate-slide-in-right absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-cream shadow-2xl">
-        <div className="flex h-16 items-center justify-between border-b border-line px-5">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-line px-5">
           <h2 className="font-heading text-xl">
             Your Bag ({items.reduce((s, i) => s + i.qty, 0)})
           </h2>
           <button
             onClick={close}
             aria-label="Close"
-            className="rounded-full p-2 hover:bg-sand"
+            className="touch-target rounded-full p-2 hover:bg-sand"
           >
             <X className="h-5 w-5" />
           </button>
@@ -92,7 +92,7 @@ export function CartDrawer() {
             <div className="border-b border-line px-5 py-4">
               <FreeShippingBar />
             </div>
-            <ul className="flex-1 divide-y divide-line overflow-y-auto px-5">
+            <ul className="min-h-0 flex-1 divide-y divide-line overflow-y-auto px-5">
               {items.map((i) => (
                 <li key={i.key} className="flex gap-4 py-4">
                   <Link
@@ -130,7 +130,7 @@ export function CartDrawer() {
                       <button
                         onClick={() => remove(i.key)}
                         aria-label={`Remove ${i.title}`}
-                        className="rounded-full p-2 text-ink-soft hover:bg-sand hover:text-danger"
+                        className="touch-target rounded-full p-2 text-ink-soft hover:bg-sand hover:text-danger"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -139,7 +139,7 @@ export function CartDrawer() {
                 </li>
               ))}
             </ul>
-            <div className="space-y-3 border-t border-line bg-white/50 p-5">
+            <div className="shrink-0 space-y-3 border-t border-line bg-white/50 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
               <div className="flex items-center justify-between font-medium">
                 <span>Subtotal</span>
                 <span className="text-lg font-semibold">
@@ -185,7 +185,7 @@ export function Qty({
     <div className="inline-flex items-center rounded-full border border-line bg-white">
       <button
         aria-label="Decrease quantity"
-        className="p-2 hover:text-accent"
+        className="touch-target p-2 hover:text-accent"
         onClick={() => onChange(qty - 1)}
       >
         <Minus className="h-3.5 w-3.5" />
@@ -195,7 +195,7 @@ export function Qty({
       </span>
       <button
         aria-label="Increase quantity"
-        className="p-2 hover:text-accent"
+        className="touch-target p-2 hover:text-accent"
         onClick={() => onChange(qty + 1)}
       >
         <Plus className="h-3.5 w-3.5" />

@@ -23,7 +23,10 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = { themeColor: "#faf6f0" };
+export const viewport: Viewport = {
+  themeColor: "#faf6f0",
+  viewportFit: "cover",
+};
 
 export default async function RootLayout({
   children,

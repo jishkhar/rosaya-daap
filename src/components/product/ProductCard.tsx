@@ -96,7 +96,7 @@ export function ProductCard({
           disabled={!ready}
           onClick={quickAdd}
           aria-label={`Quick add ${p.title} to bag`}
-          className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-cream/95 text-ink shadow transition-all hover:bg-ink hover:text-cream sm:translate-y-1 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
+          className="touch-target product-quick-add absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-cream/95 text-ink shadow transition-all hover:bg-ink hover:text-cream focus-visible:opacity-100"
         >
           <Plus className="h-5 w-5" />
         </button>

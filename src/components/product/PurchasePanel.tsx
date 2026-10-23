@@ -210,7 +210,7 @@ export function PurchasePanel({ p }: { p: Product }) {
 
       {/* Sticky mobile bar */}
       {inStock && (
-        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-line bg-cream/95 p-3 backdrop-blur lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-line bg-cream/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs text-ink-soft">{p.title}</p>
             <p className="text-base font-semibold">

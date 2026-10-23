@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { formatINR } from "@/lib/money";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
 type Result = {
   total: number;
@@ -31,15 +32,14 @@ export function SearchOverlay({
   const [q, setQ] = useState("");
   const [res, setRes] = useState<Result | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  useBodyScrollLock(true);
 
   useEffect(() => {
     input.current?.focus();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
     };
   }, [onClose]);
 
@@ -78,7 +78,7 @@ export function SearchOverlay({
         className="absolute inset-0 bg-ink/50"
         onClick={onClose}
       />
-      <div className="animate-fade-up relative max-h-[85vh] overflow-y-auto bg-cream shadow-xl">
+      <div className="animate-fade-up relative max-h-[85dvh] overflow-y-auto bg-cream shadow-xl">
         <div className="mx-auto max-w-3xl px-4 py-5 sm:py-8">
           <form
             onSubmit={(e) => {
@@ -100,7 +100,7 @@ export function SearchOverlay({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="rounded-full p-1 hover:bg-sand"
+              className="touch-target rounded-full p-1 hover:bg-sand"
             >
               <X className="h-5 w-5" />
             </button>

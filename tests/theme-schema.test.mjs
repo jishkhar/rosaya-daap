@@ -149,13 +149,15 @@ test("sections: unknown types dropped, ids fixed, capped", () => {
 });
 
 const { withIdentity } = load("../src/themes/schema.ts");
-// Rosaya's seeded theme lives in the backend repo, checked out next to this one locally (not in this repo's CI): those checks skip without it.
-const ROSAYA_SEED = new URL(
+// Find either local checkout name; seed-dependent checks skip in standalone storefront CI.
+const rosayaFixture = [
+  "../../backend/db/seed/rosaya_theme.json",
   "../../erp-ecommerce-backend/db/seed/rosaya_theme.json",
-  import.meta.url,
-);
-const rosaya = fs.existsSync(ROSAYA_SEED)
-  ? JSON.parse(fs.readFileSync(ROSAYA_SEED, "utf8"))
+]
+  .map((relative) => new URL(relative, import.meta.url))
+  .find((url) => fs.existsSync(url));
+const rosaya = rosayaFixture
+  ? JSON.parse(fs.readFileSync(rosayaFixture, "utf8"))
   : null;
 const noSeed = rosaya ? false : "backend repo not checked out next to this one";
 const store = {

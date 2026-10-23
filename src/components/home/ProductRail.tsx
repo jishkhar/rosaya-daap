@@ -31,14 +31,14 @@ export function ProductRail({ items }: { items: Product[] }) {
       <button
         aria-label="Scroll left"
         onClick={() => scroll(-1)}
-        className="absolute -left-4 top-[38%] hidden h-11 w-11 items-center justify-center rounded-full bg-cream shadow-lg hover:bg-ink hover:text-cream lg:group-hover/rail:flex"
+        className="product-rail-arrow absolute -left-4 top-[38%] hidden h-11 w-11 items-center justify-center rounded-full bg-cream shadow-lg hover:bg-ink hover:text-cream lg:group-hover/rail:flex"
       >
         <ChevronLeft className="h-5 w-5" />
       </button>
       <button
         aria-label="Scroll right"
         onClick={() => scroll(1)}
-        className="absolute -right-4 top-[38%] hidden h-11 w-11 items-center justify-center rounded-full bg-cream shadow-lg hover:bg-ink hover:text-cream lg:group-hover/rail:flex"
+        className="product-rail-arrow absolute -right-4 top-[38%] hidden h-11 w-11 items-center justify-center rounded-full bg-cream shadow-lg hover:bg-ink hover:text-cream lg:group-hover/rail:flex"
       >
         <ChevronRight className="h-5 w-5" />
       </button>

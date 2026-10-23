@@ -70,7 +70,7 @@ export default async function ProductPage({ params }: Props) {
   };
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 pb-24 sm:px-6 lg:pb-8">
+    <div className="mx-auto max-w-[1400px] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -108,7 +108,7 @@ export default async function ProductPage({ params }: Props) {
           </p>
 
           {p.colors.length > 0 && (
-            <p className="mt-5 flex items-center gap-2 text-sm">
+            <p className="mt-5 flex flex-wrap items-center gap-2 text-sm">
               Colour:
               {p.colors.map((c) => (
                 <span

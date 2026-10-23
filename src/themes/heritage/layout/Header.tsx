@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { SearchOverlay } from "@/themes/heritage/layout/SearchOverlay";
@@ -9,6 +10,7 @@ import type { StoreCollection } from "@/lib/store";
 import type { Values } from "@/themes/schema";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
 export function Header({
   collections,
@@ -25,19 +27,30 @@ export function Header({
   const { user } = useAuth();
   const [mobile, setMobile] = useState(false);
   const [search, setSearch] = useState(false);
+  useBodyScrollLock(mobile);
 
   useEffect(() => {
-    document.body.style.overflow = mobile ? "hidden" : "";
+    if (!mobile) return;
+    const desktop = window.matchMedia("(min-width: 1280px)");
+    const onResize = () => {
+      if (desktop.matches) setMobile(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobile(false);
+    };
+    desktop.addEventListener("change", onResize);
+    document.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = "";
+      desktop.removeEventListener("change", onResize);
+      document.removeEventListener("keydown", onKey);
     };
   }, [mobile]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-cream/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-4 sm:h-[76px] sm:px-6">
+      <div className="mx-auto flex h-[var(--store-header-height)] max-w-[1400px] items-center gap-3 px-4 sm:px-6">
         <button
-          className="-ml-2 rounded-full p-2 hover:bg-sand xl:hidden"
+          className="touch-target -ml-2 rounded-full p-2 hover:bg-sand xl:hidden"
           aria-label="Open menu"
           onClick={() => setMobile(true)}
         >
@@ -57,7 +70,7 @@ export function Header({
         <div className="ml-auto flex items-center gap-1 xl:ml-0">
           {settings.show_search ? (
             <button
-              className="flex items-center gap-2 rounded-full p-2.5 text-sm hover:bg-sand xl:border xl:border-line xl:bg-white xl:py-2 xl:pl-4 xl:pr-12 xl:text-ink-soft xl:hover:border-ink"
+              className="touch-target flex items-center gap-2 rounded-full p-2.5 text-sm hover:bg-sand xl:border xl:border-line xl:bg-white xl:py-2 xl:pl-4 xl:pr-12 xl:text-ink-soft xl:hover:border-ink"
               aria-label="Search"
               onClick={() => setSearch(true)}
             >
@@ -73,7 +86,7 @@ export function Header({
             <User className="h-[22px] w-[22px]" />
           </Link>
           <button
-            className="relative rounded-full p-2.5 hover:bg-sand"
+            className="touch-target relative rounded-full p-2.5 hover:bg-sand"
             aria-label={`Cart, ${count} items`}
             onClick={() => setOpen(true)}
           >
@@ -87,22 +100,26 @@ export function Header({
         </div>
       </div>
 
-      {mobile && (
-        <MobileMenu
-          collections={headerCollections}
-          onClose={() => setMobile(false)}
-        />
-      )}
-      {search && (
-        <SearchOverlay
-          suggestions={[
-            ...new Set(
-              [...headerCollections, ...collections].map((c) => c.name),
-            ),
-          ].slice(0, 6)}
-          onClose={() => setSearch(false)}
-        />
-      )}
+      {mobile &&
+        createPortal(
+          <MobileMenu
+            collections={headerCollections}
+            onClose={() => setMobile(false)}
+          />,
+          document.body,
+        )}
+      {search &&
+        createPortal(
+          <SearchOverlay
+            suggestions={[
+              ...new Set(
+                [...headerCollections, ...collections].map((c) => c.name),
+              ),
+            ].slice(0, 6)}
+            onClose={() => setSearch(false)}
+          />,
+          document.body,
+        )}
     </header>
   );
 }
@@ -128,7 +145,7 @@ function MobileMenu({
         onClick={onClose}
       />
       <div className="animate-slide-in-left relative flex h-full w-[86%] max-w-sm flex-col bg-cream text-ink">
-        <div className="flex h-16 items-center justify-between border-b border-line px-4">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-line px-4">
           <Logo />
           <button
             onClick={onClose}
@@ -138,7 +155,10 @@ function MobileMenu({
             <X className="h-6 w-6" />
           </button>
         </div>
-        <nav className="flex-1 overflow-y-auto px-4 py-2" aria-label="Mobile">
+        <nav
+          className="min-h-0 flex-1 overflow-y-auto px-4 py-2"
+          aria-label="Mobile"
+        >
           {collections.map((c) => (
             <CollectionNavItem
               key={c.id}
@@ -155,7 +175,7 @@ function MobileMenu({
             Shop All
           </Link>
         </nav>
-        <div className="border-t border-line p-4">
+        <div className="shrink-0 border-t border-line p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <Link
             href={user ? "/account" : "/login"}
             onClick={onClose}

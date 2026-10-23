@@ -7,6 +7,7 @@ import { SORTS } from "@/lib/catalog";
 import { formatINR } from "@/lib/money";
 import { FilterPanel, type FacetData } from "@/components/filters/FilterPanel";
 import { useUrlFilters } from "@/components/filters/useUrlFilters";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
 export function ListingToolbar({
   total,
@@ -19,11 +20,22 @@ export function ListingToolbar({
 }) {
   const f = useUrlFilters();
   const [sheet, setSheet] = useState(false);
+  useBodyScrollLock(sheet);
 
   useEffect(() => {
-    document.body.style.overflow = sheet ? "hidden" : "";
+    if (!sheet) return;
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const onResize = () => {
+      if (desktop.matches) setSheet(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSheet(false);
+    };
+    desktop.addEventListener("change", onResize);
+    document.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = "";
+      desktop.removeEventListener("change", onResize);
+      document.removeEventListener("keydown", onKey);
     };
   }, [sheet]);
 
@@ -52,7 +64,7 @@ export function ListingToolbar({
   ];
 
   return (
-    <div className="sticky top-16 z-30 -mx-4 border-b border-line bg-cream/95 px-4 py-3 backdrop-blur sm:top-[72px] sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
+    <div className="sticky top-[calc(var(--store-header-height)+1px)] z-30 -mx-4 border-b border-line bg-cream/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
       <div className="flex items-center justify-between gap-3">
         <button
           onClick={() => setSheet(true)}
@@ -126,21 +138,21 @@ export function ListingToolbar({
               className="absolute inset-0 bg-ink/50"
               onClick={() => setSheet(false)}
             />
-            <div className="animate-slide-up absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-3xl bg-cream">
+            <div className="animate-slide-up absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col rounded-t-3xl bg-cream">
               <div className="flex items-center justify-between border-b border-line px-5 py-4">
                 <h2 className="font-heading text-xl">Filters</h2>
                 <button
                   onClick={() => setSheet(false)}
                   aria-label="Close"
-                  className="rounded-full p-1.5 hover:bg-sand"
+                  className="touch-target rounded-full p-1.5 hover:bg-sand"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto px-5">
+              <div className="min-h-0 flex-1 overflow-y-auto px-5">
                 <FilterPanel facets={facets} />
               </div>
-              <div className="flex gap-3 border-t border-line p-4">
+              <div className="flex shrink-0 gap-3 border-t border-line p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
                 <button
                   onClick={f.clearAll}
                   className="h-12 flex-1 rounded-full border border-ink text-sm font-medium"

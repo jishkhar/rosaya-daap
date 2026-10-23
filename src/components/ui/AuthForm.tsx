@@ -140,7 +140,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               type="button"
               onClick={() => setShow(!show)}
               aria-label={show ? "Hide password" : "Show password"}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-ink-soft hover:text-ink"
+              className="touch-target absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-ink-soft hover:text-ink"
             >
               {show ? (
                 <EyeOff className="h-4 w-4" />

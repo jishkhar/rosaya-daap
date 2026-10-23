@@ -7,6 +7,7 @@
    tokens, so re-theming is a one-file change.
    ========================================================================== */
 :root {
+  --store-header-height: 4rem;
   --cream: #faf6f0;
   --sand: #f5ede1;
   --line: #e8dfd0;
@@ -19,6 +20,48 @@
   --accent: #334fb4;
   --success: #097a44;
   --danger: #b3261e;
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --store-header-height: 76px;
+  }
+}
+
+/* Preserve hover presentation on mouse devices; touch devices keep actions visible. */
+@media (hover: hover) and (pointer: fine) and (min-width: 40rem) {
+  .product-quick-add {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+  .group:hover > .product-quick-add,
+  .product-quick-add:focus-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer utilities {
+  @media (pointer: coarse) {
+    :where(.touch-target) {
+      position: relative;
+    }
+    .touch-target::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+@media (pointer: coarse) and (min-width: 64rem) {
+  .product-rail-arrow {
+    display: flex;
+  }
 }
 
 @theme inline {
