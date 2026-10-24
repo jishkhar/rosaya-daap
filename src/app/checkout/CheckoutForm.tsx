@@ -24,6 +24,8 @@ import type { User } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { call, goTo } from "@/lib/http";
 import { formatINR } from "@/lib/money";
+import { daysText } from "@/lib/shipping";
+import { useShipping } from "@/lib/shippingContext";
 
 type Address = {
   name: string;
@@ -118,6 +120,7 @@ export default function CheckoutForm({
     issues,
     loyaltyPoints,
   } = useCart();
+  const shipping = useShipping();
   const router = useRouter();
   const { user: sessionUser, ready: authReady, refreshUser } = useAuth();
   const user = authReady ? sessionUser : initialUser;
@@ -565,8 +568,10 @@ export default function CheckoutForm({
                   <div>
                     <p className="font-medium">Standard delivery</p>
                     <p className="mt-1 text-ink-soft">
-                      Estimated arrival in 5–6 business days. Shipping is
-                      calculated in your order summary.
+                      {daysText(shipping)
+                        ? `Estimated arrival in ${daysText(shipping)}. `
+                        : ""}
+                      The delivery charge is shown in your order summary.
                     </p>
                   </div>
                 </div>

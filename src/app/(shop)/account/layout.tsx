@@ -3,13 +3,21 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { LayoutDashboard, LogOut, MapPin, Package, User } from "lucide-react";
+import {
+  LayoutDashboard,
+  LogOut,
+  MapPin,
+  Package,
+  RotateCcw,
+  User,
+} from "lucide-react";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useAuth } from "@/lib/auth";
 
 const TABS = [
   { href: "/account", label: "Overview", icon: LayoutDashboard },
   { href: "/account/orders", label: "Orders", icon: Package },
+  { href: "/account/returns", label: "Returns", icon: RotateCcw },
   { href: "/account/addresses", label: "Addresses", icon: MapPin },
   { href: "/account/profile", label: "Profile", icon: User },
 ];
@@ -37,7 +45,12 @@ export default function AccountLayout({
       />
     );
 
-  const here = TABS.find((t) => t.href === pathname) ?? TABS[0];
+  // The deepest tab the address is under (/account/orders/<id>/return belongs to Orders).
+  const here =
+    [...TABS]
+      .reverse()
+      .find((t) => pathname === t.href || pathname.startsWith(`${t.href}/`)) ??
+    TABS[0];
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
@@ -59,7 +72,7 @@ export default function AccountLayout({
           className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-col md:px-0"
         >
           {TABS.map(({ href, label, icon: Icon }) => {
-            const on = pathname === href;
+            const on = here.href === href;
             return (
               <Link
                 key={href}

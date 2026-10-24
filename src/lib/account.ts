@@ -23,6 +23,8 @@ export type ApiOrder = {
   placed_at: string;
   total_minor: number;
   discount_minor: number;
+  /** The delivery charge in the total (older orders: absent). */
+  delivery_fee_minor?: number;
   paid_minor: number;
   payment_method: "cod" | "online" | null;
   payment_url: string | null;

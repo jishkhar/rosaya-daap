@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, ChevronDown, Package } from "lucide-react";
 import {
   addressLine,
@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { call, goTo } from "@/lib/http";
 import { formatINR } from "@/lib/money";
+import { longDate, type Returnable } from "@/lib/returns";
 import { ButtonLink } from "@/components/ui/Button";
 
 const badge: Record<OrderStage, string> = {
@@ -207,6 +208,8 @@ export default function OrdersPage() {
                       ))}
                     </ul>
 
+                    {stage === "Delivered" && <OrderReturns orderId={o.id} />}
+
                     <div className="flex flex-wrap items-end justify-between gap-4 text-sm">
                       <div className="space-y-1 text-ink-soft">
                         {o.delivery_address && (
@@ -230,6 +233,12 @@ export default function OrdersPage() {
                           <p>
                             <span className="text-ink">You saved:</span>{" "}
                             {formatINR(o.discount_minor / 100)}
+                          </p>
+                        )}
+                        {(o.delivery_fee_minor ?? 0) > 0 && (
+                          <p>
+                            <span className="text-ink">Delivery:</span>{" "}
+                            {formatINR((o.delivery_fee_minor ?? 0) / 100)}
                           </p>
                         )}
                       </div>
@@ -273,6 +282,43 @@ export default function OrdersPage() {
             );
           })}
         </ul>
+      )}
+    </div>
+  );
+}
+
+/** A delivered order's return window, and the way in to a return request while it is open. */
+function OrderReturns({ orderId }: { orderId: string }) {
+  const [r, setR] = useState<Returnable | null>(null);
+  useEffect(() => {
+    let live = true;
+    void call<Returnable>(`/api/me/orders/${orderId}/returnable`).then(
+      (res) => live && res.ok && setR(res.data),
+    );
+    return () => {
+      live = false;
+    };
+  }, [orderId]);
+  if (!r) return null;
+  const left = r.lines.some((l) => l.returnable_quantity > 0);
+  const { open, closes_on, days } = r.window;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-sand/60 px-4 py-3 text-sm">
+      <p className="text-ink-soft">
+        {days <= 0
+          ? "Returns aren't accepted on website orders."
+          : open && left
+            ? `Returns accepted until ${longDate(closes_on!)}.`
+            : open
+              ? "Everything on this order has already been returned."
+              : closes_on
+                ? `The return window closed on ${longDate(closes_on)}.`
+                : "Returns open once the order is delivered."}
+      </p>
+      {open && left && (
+        <ButtonLink href={`/account/orders/${orderId}/return`}>
+          Return items
+        </ButtonLink>
       )}
     </div>
   );

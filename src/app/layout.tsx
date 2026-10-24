@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { permanentRedirect } from "next/navigation";
 import "@fontsource-variable/josefin-sans";
 import "@fontsource/poppins/400.css";
 import "@fontsource/poppins/500.css";
@@ -7,6 +8,7 @@ import "./globals.css";
 import { NoShop } from "@/components/NoShop";
 import { Providers } from "@/components/Providers";
 import type { Brand } from "@/lib/brand";
+import { primaryRedirect } from "@/lib/primary";
 import { siteUrl } from "@/lib/site";
 import { getStorefront } from "@/themes/registry";
 
@@ -33,12 +35,15 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { config, status } = await getStorefront();
+  const { config, status, primaryHost, shipping } = await getStorefront();
+  // A shop's other addresses (platform address, non-primary domains) answer 308 to the primary one, same path.
+  const target = await primaryRedirect(primaryHost);
+  if (target) permanentRedirect(target);
   return (
     <html lang="en">
       <body className="min-h-screen overflow-x-clip">
         {status === "open" ? (
-          <Providers brand={config.settings.brand as Brand}>
+          <Providers brand={config.settings.brand as Brand} shipping={shipping}>
             {children}
           </Providers>
         ) : (

@@ -7,9 +7,12 @@ import { ButtonLink } from "@/components/ui/Button";
 import { addressLine, type ApiOrder } from "@/lib/account";
 import { call, goTo } from "@/lib/http";
 import { formatINR } from "@/lib/money";
+import { daysText } from "@/lib/shipping";
+import { useShipping } from "@/lib/shippingContext";
 
 /** Check the order itself: a payment return URL does not prove that payment succeeded. */
 export function OrderConfirmation({ id }: { id: string }) {
+  const shipping = useShipping();
   const [o, setO] = useState<ApiOrder | null>(null);
   const [missing, setMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,11 +175,13 @@ export function OrderConfirmation({ id }: { id: string }) {
         <ol className="mt-8 space-y-3 rounded-2xl bg-sand/70 p-6 text-left text-sm">
           <li className="flex gap-3">
             <Package className="h-5 w-5 shrink-0 text-taupe-dark" /> We&apos;re
-            packing your order — it ships within 24 hours.
+            packing your order.
           </li>
           <li className="flex gap-3">
-            <Truck className="h-5 w-5 shrink-0 text-taupe-dark" /> Estimated
-            delivery in 5–6 business days
+            <Truck className="h-5 w-5 shrink-0 text-taupe-dark" />
+            {daysText(shipping)
+              ? `Estimated delivery in ${daysText(shipping)}`
+              : "We'll deliver it"}
             {o.delivery_address ? ` to ${addressLine(o.delivery_address)}` : ""}
             .
           </li>

@@ -1,4 +1,5 @@
 import { Mail, MapPin, Phone } from "lucide-react";
+import Link from "next/link";
 import { FooterColumn } from "@/themes/heritage/layout/FooterColumn";
 import { Logo } from "@/components/ui/Logo";
 import { Newsletter } from "@/themes/heritage/layout/Newsletter";
@@ -15,9 +16,11 @@ type Column = { title: string; store_collections: boolean; links: Link[] };
 export function Footer({
   collections = [],
   settings,
+  policyLinks = [],
 }: {
   collections?: { slug: string; name: string }[];
   settings: Values;
+  policyLinks?: Link[];
 }) {
   const columns = (settings.columns as Column[]).map((column) => ({
     title: column.title,
@@ -33,6 +36,9 @@ export function Footer({
       ...column.links.filter((l) => l.label && l.href),
     ],
   }));
+  // Written policies the link columns do not already point at, in a row by the copyright.
+  const linked = new Set(columns.flatMap((c) => c.links.map((l) => l.href)));
+  const policies = policyLinks.filter((l) => !linked.has(l.href));
   const socials = [
     {
       l: "Instagram",
@@ -117,9 +123,25 @@ export function Footer({
         )}
 
         <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-cream/15 pt-6 text-xs text-cream/55 sm:flex-row">
-          <p>
-            © {new Date().getFullYear()} {settings.copyright as string}
-          </p>
+          <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-4">
+            <p>
+              © {new Date().getFullYear()} {settings.copyright as string}
+            </p>
+            {policies.length > 0 && (
+              <ul
+                className="flex flex-wrap justify-center gap-x-4 gap-y-1"
+                aria-label="Policies"
+              >
+                {policies.map((l) => (
+                  <li key={l.href}>
+                    <Link href={l.href} className="hover:text-gold">
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           {payments.length > 0 && (
             <ul
               className="flex flex-wrap items-center justify-center gap-2"

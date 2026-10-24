@@ -9,8 +9,10 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Price } from "@/components/ui/Price";
 import { colorHex } from "@/lib/catalog";
 import { siteUrl } from "@/lib/site";
-import { getPolicies, getProduct, related, type Policies } from "@/lib/store";
+import type { Policies } from "@/lib/policies";
+import { getPolicies, getProduct, related } from "@/lib/store";
 import { descriptionText } from "@/lib/richText";
+import { feeText } from "@/lib/shipping";
 import { getStorefront } from "@/themes/registry";
 import type { Values } from "@/themes/schema";
 
@@ -104,7 +106,10 @@ export default async function ProductPage({ params }: Props) {
             <Price price={p.price} mrp={p.mrp} size="lg" />
           </div>
           <p className="mt-1 text-xs text-ink-soft">
-            Inclusive of all taxes. Free shipping on every order.
+            Inclusive of all taxes.
+            {feeText((await getStorefront()).shipping)
+              ? ` ${feeText((await getStorefront()).shipping)}.`
+              : ""}
           </p>
 
           {p.colors.length > 0 && (

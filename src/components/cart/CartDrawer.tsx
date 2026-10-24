@@ -7,6 +7,8 @@ import { useEffect } from "react";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { formatINR } from "@/lib/money";
+import { feeText } from "@/lib/shipping";
+import { useShipping } from "@/lib/shippingContext";
 import { FreeShippingBar } from "@/components/cart/FreeShippingBar";
 import { ButtonLink } from "@/components/ui/Button";
 import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
@@ -22,6 +24,7 @@ export function CartDrawer() {
     issues,
     storageError,
   } = useCart();
+  const shipping = useShipping();
   const pathname = usePathname();
   useBodyScrollLock(open);
 
@@ -75,9 +78,9 @@ export function CartDrawer() {
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
             <ShoppingBag className="h-12 w-12 text-taupe" strokeWidth={1.2} />
             <p className="font-heading text-xl">Your bag is empty</p>
-            <p className="text-sm text-ink-soft">
-              Free shipping on every order.
-            </p>
+            {feeText(shipping) && (
+              <p className="text-sm text-ink-soft">{feeText(shipping)}.</p>
+            )}
             <ButtonLink
               href="/c/new-arrivals"
               size="lg"
