@@ -37,6 +37,16 @@ export type ApiOrder = {
     pincode?: string;
   } | null;
   items: OrderItem[];
+  /** The parcel, once the shop has packed it: who carries it and how to track it. */
+  shipment?: {
+    status: string;
+    carrier_name: string | null;
+    tracking_number: string | null;
+    tracking_url: string | null;
+    rider_name: string | null;
+    dispatched_at: string | null;
+    delivered_at: string | null;
+  } | null;
 };
 export type Address = {
   id: string;

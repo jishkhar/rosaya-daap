@@ -30,7 +30,7 @@ test("register, save an address, pay online, see the order, reorder, sign out an
     .fill("12 MG Road, Navrangpura");
   await page.getByLabel("Pincode").fill("380009");
   await page.getByLabel("City").fill("Ahmedabad");
-  await page.getByLabel("State").fill("Gujarat");
+  await expect(page.getByLabel("State")).toHaveValue("Gujarat"); // from the pincode
   await page.getByRole("button", { name: "Save address" }).click();
   await expect(page.getByText("12 MG Road, Navrangpura")).toBeVisible();
   await expect(page.getByText("Default")).toBeVisible();

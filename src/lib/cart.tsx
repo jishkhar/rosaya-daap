@@ -84,11 +84,22 @@ export type Quote = {
   shipping_minor: number;
   grand_total_minor: number;
   free_shipping_above_minor: number | null;
+  /** The delivery zone of the quoted pincode (or the shop's default zone): days, and whether cash on delivery is offered for this total. */
+  delivery?: {
+    zone: string | null;
+    min_days: number | null;
+    max_days: number | null;
+    cod_available: boolean;
+    cod_reason: string | null;
+    cod_max_minor: number | null;
+  };
 };
 
 type Ctx = {
   loyaltyPoints: number;
   setLoyaltyPoints: (points: number) => void;
+  /** The delivery address's pincode: its delivery zone decides the fee the quote charges (null = the shop's default zone). */
+  setDeliveryPincode: (pincode: string | null) => void;
   items: CartItem[];
   count: number;
   /** server-priced figures in rupees (local estimates until the first quote arrives) */
@@ -151,6 +162,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [couponCode, setCouponCode] = useState<string | null>(null);
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [deliveryPincode, setDeliveryPincode] = useState<string | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [open, setOpen] = useState(false);
@@ -284,6 +296,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const sig = JSON.stringify({
     ...payloadOf(items, couponCode),
     loyalty_points: loyaltyPoints,
+    pincode: deliveryPincode,
   });
   const latest = useRef(items);
   useEffect(() => {
@@ -393,6 +406,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         body: {
           ...payloadOf(latest.current, c),
           loyalty_points: loyaltyPoints,
+          pincode: deliveryPincode,
         },
       });
       if (!r.ok) return { ok: false, reason: r.error };
@@ -409,7 +423,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             : "This code isn't valid or has expired.",
       };
     },
-    [loyaltyPoints],
+    [loyaltyPoints, deliveryPincode],
   );
 
   const value = useMemo<Ctx>(() => {
@@ -437,6 +451,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       clear,
       loyaltyPoints,
       setLoyaltyPoints,
+      setDeliveryPincode,
       quote,
       quoting,
       issues: quote?.issues ?? [],

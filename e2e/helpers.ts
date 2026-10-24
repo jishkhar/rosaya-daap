@@ -49,5 +49,6 @@ export async function fillAddress(
     .fill(v.line1 ?? "12 MG Road, Navrangpura");
   await page.getByLabel("Pincode").fill(v.pincode ?? "380009");
   await page.getByLabel("City").fill(v.city ?? "Ahmedabad");
-  await page.getByLabel("State").fill(v.state ?? "Gujarat");
+  // the state is set by the pincode (the ERP's pincode directory), not typed
+  await expect(page.getByLabel("State")).toHaveValue(v.state ?? "Gujarat");
 }

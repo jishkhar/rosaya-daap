@@ -22,7 +22,15 @@ import { type Address as SavedAddress } from "@/lib/account";
 import { useAuth } from "@/lib/auth";
 import type { User } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
+import { useDeliverTo } from "@/lib/deliverTo";
 import { call, goTo } from "@/lib/http";
+import {
+  lookupPincode,
+  PINCODE_RE,
+  stateFor,
+  UNKNOWN_PINCODE,
+  type Place,
+} from "@/lib/pincode";
 import { formatINR } from "@/lib/money";
 import { daysText } from "@/lib/shipping";
 import { useShipping } from "@/lib/shippingContext";
@@ -119,6 +127,7 @@ export default function CheckoutForm({
     quoting,
     issues,
     loyaltyPoints,
+    setDeliveryPincode,
   } = useCart();
   const shipping = useShipping();
   const router = useRouter();
@@ -138,20 +147,67 @@ export default function CheckoutForm({
     typedPhone ??
     (selectedAddress?.phone || user?.phone || "").replace(/^\+91/, "");
   const setContactPhone = (v: string) => setTypedPhone(v);
+  const deliverTo = useDeliverTo();
   const [typed, setTyped] = useState<Partial<Address>>({});
   // Derive defaults as saved data arrives; only fields edited by the shopper override them.
   const addr: Address = {
     name: selectedAddress?.name || user?.name || "",
     line1: selectedAddress?.line1 ?? "",
     line2: selectedAddress?.line2 ?? "",
-    pincode: selectedAddress?.pincode ?? "",
+    pincode: selectedAddress?.pincode ?? deliverTo.pin ?? "", // the header's "Deliver to" pincode when nothing is saved
     city: selectedAddress?.city ?? "",
     state: selectedAddress?.state ?? "",
     ...typed,
   };
   const setAddr = (patch: Partial<Address>) =>
     setTyped((current) => ({ ...current, ...patch }));
+  // The pincode decides the state (the GST place of supply) and suggests the city; only border pincodes offer a choice of state.
+  const [pinPlace, setPinPlace] = useState<{
+    pin: string;
+    place: Place | null;
+  }>();
+  const latestPin = useRef("");
+  const here =
+    pinPlace && pinPlace.pin === addr.pincode ? pinPlace.place : undefined;
+  // The quote charges the delivery zone of this pincode (the server works it out); a half-typed one keeps the shop's default zone.
+  const quotedPin = PINCODE_RE.test(addr.pincode) ? addr.pincode : null;
+  useEffect(() => {
+    setDeliveryPincode(quotedPin);
+  }, [quotedPin, setDeliveryPincode]);
+  useEffect(() => () => setDeliveryPincode(null), [setDeliveryPincode]);
+  const onPincode = (pin: string) => {
+    latestPin.current = pin;
+    setAddr({ pincode: pin });
+    if (!PINCODE_RE.test(pin)) return;
+    void lookupPincode(pin).then((found) => {
+      if (found === undefined || latestPin.current !== pin) return;
+      setPinPlace({ pin, place: found });
+      if (found)
+        setAddr({
+          state: stateFor(found, addr.state),
+          city: addr.city.trim() ? addr.city : found.district,
+        });
+      setErrors((current) => {
+        const rest = { ...current };
+        delete rest.pincode;
+        return found ? rest : { ...rest, pincode: UNKNOWN_PINCODE };
+      });
+    });
+  };
   const [pay, setPay] = useState<"online" | "cod">("online");
+  // The delivery time of the address's zone (from the quote), else the shop's default one.
+  const zoneDays = quote?.delivery
+    ? {
+        ...(shipping ?? { fee_minor: 0, free_above_minor: null }),
+        delivery_min_days: quote.delivery.min_days,
+        delivery_max_days: quote.delivery.max_days,
+      }
+    : shipping;
+  // The address's delivery zone may not offer cash on delivery, or not for this much (the server refuses it too).
+  const codOff =
+    quote?.delivery && !quote.delivery.cod_available
+      ? (quote.delivery.cod_reason ?? "Not available for this address.")
+      : null;
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [placing, setPlacing] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -179,12 +235,13 @@ export default function CheckoutForm({
     if (!/^[1-9]\d{5}$/.test(addr.pincode))
       e.pincode = "Enter a valid 6-digit pincode.";
     if (!addr.city.trim()) e.city = "Enter your city.";
-    if (!addr.state.trim()) e.state = "Enter your state.";
     if (!Object.keys(e).length) {
-      const r = await call<{ serviceable: boolean }>(
+      const r = await call<{ serviceable: boolean; reason?: string }>(
         `/api/serviceability/${addr.pincode}`,
       );
-      if (r.ok && !r.data.serviceable)
+      if (r.ok && r.data.reason === "unknown_pincode")
+        e.pincode = UNKNOWN_PINCODE;
+      else if (r.ok && !r.data.serviceable)
         e.pincode = "Sorry, we don't deliver to this pincode yet.";
     }
     setErrors(e);
@@ -240,7 +297,7 @@ export default function CheckoutForm({
         state: addr.state.trim(),
         pincode: addr.pincode,
       },
-      payment_method: pay,
+      payment_method: codOff ? "online" : pay,
       expected_total_minor: quote?.grand_total_minor,
     };
     // One Idempotency-Key per distinct order attempt: a double click or a retry after a timeout replays the same order.
@@ -522,7 +579,7 @@ export default function CheckoutForm({
                     autoComplete="postal-code"
                     value={addr.pincode}
                     onChange={(e) =>
-                      setAddr({ pincode: e.target.value.replace(/\D/g, "") })
+                      onPincode(e.target.value.replace(/\D/g, ""))
                     }
                     className={field}
                   />
@@ -551,14 +608,36 @@ export default function CheckoutForm({
                   >
                     State
                   </label>
-                  <input
-                    id="state"
-                    autoComplete="address-level1"
-                    value={addr.state}
-                    onChange={(e) => setAddr({ state: e.target.value })}
-                    className={field}
-                  />
-                  <Err errors={errors} k="state" />
+                  {here && here.states.length > 1 ? (
+                    <select
+                      id="state"
+                      autoComplete="address-level1"
+                      value={addr.state}
+                      onChange={(e) => setAddr({ state: e.target.value })}
+                      className={field}
+                    >
+                      {here.states.map((s) => (
+                        <option key={s.code} value={s.name}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id="state"
+                      autoComplete="address-level1"
+                      value={addr.state}
+                      readOnly
+                      placeholder="Filled in from your pincode"
+                      aria-describedby="state-note"
+                      className={`${field} cursor-default bg-transparent`}
+                    />
+                  )}
+                  <p id="state-note" className="mt-1 text-xs text-ink-soft">
+                    {here && here.states.length > 1
+                      ? "This pincode is on a state border: choose your state."
+                      : "Set by your pincode."}
+                  </p>
                 </div>
                 <div className="flex items-start gap-3 rounded-xl border border-[#e6d9c4] bg-[#fbf5e9] p-3 text-xs sm:col-span-2">
                   <Truck
@@ -566,10 +645,14 @@ export default function CheckoutForm({
                     className="mt-0.5 h-4 w-4 shrink-0 text-[#916b36]"
                   />
                   <div>
-                    <p className="font-medium">Standard delivery</p>
+                    <p className="font-medium">
+                      {quote?.delivery?.zone
+                        ? `Delivery: ${quote.delivery.zone}`
+                        : "Standard delivery"}
+                    </p>
                     <p className="mt-1 text-ink-soft">
-                      {daysText(shipping)
-                        ? `Estimated arrival in ${daysText(shipping)}. `
+                      {daysText(zoneDays)
+                        ? `Estimated arrival in ${daysText(zoneDays)}. `
                         : ""}
                       The delivery charge is shown in your order summary.
                     </p>
@@ -679,18 +762,22 @@ export default function CheckoutForm({
                 "Pay online",
                 "UPI, cards, netbanking, wallets via Razorpay",
               ],
-              ["cod", "Cash on delivery", "Pay when your order arrives"],
+              [
+                "cod",
+                "Cash on delivery",
+                codOff ?? "Pay when your order arrives",
+              ],
             ] as const
           ).map(([v, t, d]) => (
             <label
               key={v}
-              className={`flex cursor-pointer items-start gap-4 rounded-xl border p-4 ${pay === v ? "border-[#75414b] bg-[#fbf4f1]" : "border-line"}`}
+              className={`flex items-start gap-4 rounded-xl border p-4 ${v === "cod" && codOff ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${pay === v && !(v === "cod" && codOff) ? "border-[#75414b] bg-[#fbf4f1]" : "border-line"}`}
             >
               <input
                 type="radio"
                 name="pay"
-                disabled={placing}
-                checked={pay === v}
+                disabled={placing || (v === "cod" && !!codOff)}
+                checked={pay === v && !(v === "cod" && codOff)}
                 onChange={() => setPay(v)}
                 className="mt-1 h-4 w-4 accent-[#43262b]"
               />

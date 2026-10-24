@@ -28,6 +28,17 @@ const badge: Record<OrderStage, string> = {
   Cancelled: "bg-danger/10 text-danger",
 };
 
+/** How a parcel's status reads to the shopper (services/shipments.py statuses). */
+const SHIPMENT_WORDS: Record<string, string> = {
+  ready_to_ship: "Packed, leaving soon",
+  in_transit: "On its way",
+  out_for_delivery: "Out for delivery today",
+  failed_attempt: "We couldn't deliver it; we'll try again",
+  rto_in_transit: "Coming back to the shop",
+  rto_delivered: "Returned to the shop",
+  lost: "Delayed, the shop will contact you",
+};
+
 export default function OrdersPage() {
   const { user } = useAuth();
   const {
@@ -212,6 +223,32 @@ export default function OrdersPage() {
 
                     <div className="flex flex-wrap items-end justify-between gap-4 text-sm">
                       <div className="space-y-1 text-ink-soft">
+                        {o.shipment && o.shipment.status !== "delivered" && (
+                          <p>
+                            <span className="text-ink">Shipment:</span>{" "}
+                            {SHIPMENT_WORDS[o.shipment.status] ?? "On its way"}
+                            {o.shipment.carrier_name &&
+                              ` · ${o.shipment.carrier_name}`}
+                            {o.shipment.rider_name &&
+                              ` · ${o.shipment.rider_name}`}
+                            {o.shipment.tracking_number &&
+                              (o.shipment.tracking_url ? (
+                                <>
+                                  {" · "}
+                                  <a
+                                    href={o.shipment.tracking_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-ink underline"
+                                  >
+                                    Track {o.shipment.tracking_number}
+                                  </a>
+                                </>
+                              ) : (
+                                ` · Tracking ${o.shipment.tracking_number}`
+                              ))}
+                          </p>
+                        )}
                         {o.delivery_address && (
                           <p>
                             <span className="text-ink">Deliver to:</span>{" "}

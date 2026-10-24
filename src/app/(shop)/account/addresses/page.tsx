@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MapPin, Plus, Trash2 } from "lucide-react";
 import { useRemoteList, type Address } from "@/lib/account";
 import { useAuth } from "@/lib/auth";
 import { call } from "@/lib/http";
+import {
+  lookupPincode,
+  PINCODE_RE,
+  stateFor,
+  UNKNOWN_PINCODE,
+  type Place,
+} from "@/lib/pincode";
 
 const input =
   "h-12 w-full rounded-xl border border-line bg-white px-4 text-sm outline-none focus:border-ink";
@@ -66,6 +73,35 @@ export default function AddressesPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  // The pincode sets the state (and suggests the city); a border pincode offers its states.
+  const [pinPlace, setPinPlace] = useState<{
+    pin: string;
+    place: Place | null;
+  }>();
+  const latestPin = useRef("");
+  const here =
+    pinPlace && pinPlace.pin === form.pincode ? pinPlace.place : undefined;
+  const onPincode = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const pin = e.target.value.replace(/\D/g, "");
+    latestPin.current = pin;
+    setForm((f) => ({ ...f, pincode: pin }));
+    if (!PINCODE_RE.test(pin)) return;
+    void lookupPincode(pin).then((found) => {
+      if (found === undefined || latestPin.current !== pin) return;
+      setPinPlace({ pin, place: found });
+      if (found)
+        setForm((f) => ({
+          ...f,
+          state: stateFor(found, f.state),
+          city: f.city.trim() ? f.city : found.district,
+        }));
+      setErrors((current) => {
+        const rest = { ...current };
+        delete rest.pincode;
+        return found ? rest : { ...rest, pincode: UNKNOWN_PINCODE };
+      });
+    });
+  };
 
   if (!ready)
     return (
@@ -104,8 +140,8 @@ export default function AddressesPage() {
     if (form.line1.trim().length < 5) err.line1 = "Enter the address.";
     if (!/^[1-9]\d{5}$/.test(form.pincode))
       err.pincode = "Enter a valid 6-digit pincode.";
+    else if (here === null) err.pincode = UNKNOWN_PINCODE;
     if (!form.city.trim()) err.city = "Enter the city.";
-    if (!form.state.trim()) err.state = "Enter the state.";
     setErrors(err);
     if (Object.keys(err).length) return;
     setSaving(true);
@@ -247,7 +283,7 @@ export default function AddressesPage() {
               maxLength={6}
               autoComplete="postal-code"
               value={form.pincode}
-              onChange={set("pincode")}
+              onChange={onPincode}
               className={input}
             />
           </Field>
@@ -262,13 +298,30 @@ export default function AddressesPage() {
           </Field>
           <div className="sm:col-span-2">
             <Field id="a-state" label="State" error={errors.state}>
-              <input
-                id="a-state"
-                autoComplete="address-level1"
-                value={form.state}
-                onChange={set("state")}
-                className={input}
-              />
+              {here && here.states.length > 1 ? (
+                <select
+                  id="a-state"
+                  autoComplete="address-level1"
+                  value={form.state}
+                  onChange={(e) => setForm({ ...form, state: e.target.value })}
+                  className={input}
+                >
+                  {here.states.map((s) => (
+                    <option key={s.code} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  id="a-state"
+                  autoComplete="address-level1"
+                  value={form.state}
+                  readOnly
+                  placeholder="Filled in from the pincode"
+                  className={`${input} cursor-default bg-transparent`}
+                />
+              )}
             </Field>
           </div>
           {apiError && (

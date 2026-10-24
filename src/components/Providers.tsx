@@ -3,6 +3,7 @@
 import { AuthProvider } from "@/lib/auth";
 import { BrandProvider, type Brand } from "@/lib/brand";
 import { CartProvider } from "@/lib/cart";
+import { DeliverToProvider } from "@/lib/deliverTo";
 import type { Shipping } from "@/lib/shipping";
 import { ShippingProvider } from "@/lib/shippingContext";
 import { CartDrawer } from "@/components/cart/CartDrawer";
@@ -21,8 +22,10 @@ export function Providers({
       <ShippingProvider shipping={shipping}>
         <AuthProvider>
           <CartProvider>
-            {children}
-            <CartDrawer />
+            <DeliverToProvider>
+              {children}
+              <CartDrawer />
+            </DeliverToProvider>
           </CartProvider>
         </AuthProvider>
       </ShippingProvider>

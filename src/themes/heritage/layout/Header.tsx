@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Menu, Search, ShoppingBag, User, X } from "lucide-react";
+import { DeliverTo } from "@/components/delivery/DeliverTo";
 import { Logo } from "@/components/ui/Logo";
 import { SearchOverlay } from "@/themes/heritage/layout/SearchOverlay";
 import type { StoreCollection } from "@/lib/store";
@@ -68,6 +69,7 @@ export function Header({
         </nav>
 
         <div className="ml-auto flex items-center gap-1 xl:ml-0">
+          <DeliverTo />
           {settings.show_search ? (
             <button
               className="touch-target flex items-center gap-2 rounded-full p-2.5 text-sm hover:bg-sand xl:border xl:border-line xl:bg-white xl:py-2 xl:pl-4 xl:pr-12 xl:text-ink-soft xl:hover:border-ink"

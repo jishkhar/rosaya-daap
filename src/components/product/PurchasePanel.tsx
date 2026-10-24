@@ -5,9 +5,14 @@ import { useState } from "react";
 import { Check, MapPin, RotateCcw, ShieldCheck, Truck } from "lucide-react";
 import type { Product } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
-import { call } from "@/lib/http";
+import {
+  answerParts,
+  useDeliverTo,
+  type DeliveryAnswer,
+} from "@/lib/deliverTo";
+import { PINCODE_RE, UNKNOWN_PINCODE } from "@/lib/pincode";
 import { formatINR } from "@/lib/money";
-import { daysText, feeText } from "@/lib/shipping";
+import { daysText } from "@/lib/shipping";
 import { useShipping } from "@/lib/shippingContext";
 import { Qty } from "@/components/cart/CartDrawer";
 import { Button } from "@/components/ui/Button";
@@ -23,7 +28,7 @@ export function PurchasePanel({ p }: { p: Product }) {
   );
   const variant = p.variants.find((v) => v.id === vid);
   const [qty, setQty] = useState(1);
-  const [pin, setPin] = useState("");
+  const [pin, setPin] = useState<string | null>(null); // null = not typed here: show the remembered pincode
   const [pinMsg, setPinMsg] = useState<{ ok: boolean; text: string } | null>(
     null,
   );
@@ -62,31 +67,51 @@ export function PurchasePanel({ p }: { p: Product }) {
     }
   };
 
+  // The ERP's one delivery check (the same one checkout and the order make), through the header's remembered "Deliver to" pincode: a
+  // pincode checked here becomes the shopper's, and a remembered one is shown here at once. With a size chosen it also asks about it.
+  const deliverTo = useDeliverTo();
+  const shownPin = pin ?? deliverTo.pin ?? "";
+  const say = (
+    a: DeliveryAnswer,
+    forItem: boolean,
+  ): { ok: boolean; text: string } => {
+    if (a.reason === "unknown_pincode")
+      return { ok: false, text: UNKNOWN_PINCODE };
+    if (a.reason === "out_of_stock")
+      return {
+        ok: false,
+        text: `This ${forItem && variant?.size ? "size" : "item"} can't be delivered to ${a.pincode} right now.`,
+      };
+    if (!a.serviceable)
+      return {
+        ok: false,
+        text: `Sorry, we don't deliver to ${a.pincode} yet.`,
+      };
+    const where = a.place ? ` (${a.place.district})` : "";
+    return {
+      ok: true,
+      text: [
+        `Delivers to ${a.pincode}${where}`,
+        ...answerParts(a, formatINR),
+      ].join(" · "),
+    };
+  };
+  const remembered =
+    pinMsg === null && deliverTo.answer && deliverTo.answer.pincode === shownPin
+      ? say(deliverTo.answer, false)
+      : null;
+
   const checkPin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!/^[1-9]\d{5}$/.test(pin))
+    if (!PINCODE_RE.test(shownPin))
       return setPinMsg({ ok: false, text: "Enter a valid 6-digit pincode." });
     setChecking(true);
-    const r = await call<{ serviceable: boolean }>(
-      `/api/serviceability/${pin}`,
+    const a = await deliverTo.check(
+      shownPin,
+      vid ? { variantId: vid, quantity: Math.min(qty, maxQty) } : undefined,
     );
     setChecking(false);
-    if (!r.ok) return setPinMsg({ ok: false, text: r.error });
-    setPinMsg(
-      r.data.serviceable
-        ? {
-            ok: true,
-            text: [
-              daysText(shipping)
-                ? `Delivery in ${daysText(shipping)}`
-                : "We deliver to this pincode",
-              feeText(shipping),
-            ]
-              .filter(Boolean)
-              .join(" · "),
-          }
-        : { ok: false, text: "Sorry, we don't deliver to this pincode yet." },
-    );
+    setPinMsg("error" in a ? { ok: false, text: a.error } : say(a, !!vid));
   };
 
   return (
@@ -206,8 +231,11 @@ export function PurchasePanel({ p }: { p: Product }) {
             id="pin"
             inputMode="numeric"
             maxLength={6}
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+            value={shownPin}
+            onChange={(e) => {
+              setPin(e.target.value.replace(/\D/g, ""));
+              setPinMsg(null);
+            }}
             placeholder="Enter pincode"
             className="h-11 min-w-0 flex-1 rounded-full border border-line bg-cream px-4 text-sm"
           />
@@ -215,12 +243,12 @@ export function PurchasePanel({ p }: { p: Product }) {
             {checking ? "…" : "Check"}
           </Button>
         </div>
-        {pinMsg && (
+        {(pinMsg ?? remembered) && (
           <p
-            className={`mt-2 text-sm ${pinMsg.ok ? "text-success" : "text-danger"}`}
+            className={`mt-2 text-sm ${(pinMsg ?? remembered)?.ok ? "text-success" : "text-danger"}`}
             role="status"
           >
-            {pinMsg.text}
+            {(pinMsg ?? remembered)?.text}
           </p>
         )}
       </form>
