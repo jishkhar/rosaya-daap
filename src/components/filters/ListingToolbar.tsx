@@ -68,7 +68,7 @@ export function ListingToolbar({
       <div className="flex items-center justify-between gap-3">
         <button
           onClick={() => setSheet(true)}
-          className="flex items-center gap-2 rounded-full border border-ink px-4 py-2 text-sm font-medium lg:hidden"
+          className="flex shrink-0 items-center gap-2 rounded-full border border-ink px-4 py-2 text-sm font-medium lg:hidden"
         >
           <SlidersHorizontal className="h-4 w-4" /> Filter
           {chips.length > 0 && (
@@ -80,9 +80,12 @@ export function ListingToolbar({
         <p className="hidden text-sm text-ink-soft lg:block" aria-live="polite">
           {total} {total === 1 ? "product" : "products"}
         </p>
-        <label className="ml-auto flex items-center gap-2 text-sm">
-          <span className="hidden text-ink-soft sm:inline">Sort by</span>
+        <label className="ml-auto flex min-w-0 items-center gap-2 text-sm">
+          <span className="hidden shrink-0 text-ink-soft sm:inline">
+            Sort by
+          </span>
           <select
+            aria-label="Sort products"
             value={f.sp.get("sort") ?? defaultSort}
             onChange={(e) =>
               f.set(
@@ -90,7 +93,7 @@ export function ListingToolbar({
                 e.target.value === defaultSort ? null : e.target.value,
               )
             }
-            className="h-10 rounded-full border border-line bg-white px-4 text-sm"
+            className="h-10 min-w-0 max-w-full rounded-full border border-line bg-white px-4 text-sm"
           >
             {SORTS.map((s) => (
               <option key={s.value} value={s.value}>
