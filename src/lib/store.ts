@@ -266,36 +266,41 @@ const titleOf = (slug: string) => slug.split("-").map(cap).join(" ");
 
 /** This shop's collections, from its own catalogue (once per request; the API answer is cached a minute). A slug used twice keeps
  * the first: categories, then crafts, then occasions. Values that are not URL-safe slugs get no page (they still work as filters). */
-export const getCatalogue = cache(async (): Promise<Collection[]> => {
-  const c = await api<ApiCollections>("/collections", { revalidate: 60 });
-  const all: Collection[] = [
-    ...c.categories.map((x) => ({
-      slug: x.slug,
-      name: x.name,
-      kind: "category" as const,
-      blurb: x.blurb ?? "",
-      count: x.product_count,
-    })),
-    ...c.crafts.map((x) => ({
-      slug: x.slug,
-      name: titleOf(x.slug),
-      kind: "craft" as const,
-      blurb: "",
-      count: x.product_count,
-    })),
-    ...c.occasions.map((x) => ({
-      slug: x.slug,
-      name: titleOf(x.slug),
-      kind: "occasion" as const,
-      blurb: "",
-      count: x.product_count,
-    })),
-  ];
-  const seen = new Set<string>();
-  return all.filter(
-    (x) => SLUG.test(x.slug) && !seen.has(x.slug) && !!seen.add(x.slug),
-  );
-});
+export const getCatalogue = cache(
+  async (fresh = false): Promise<Collection[]> => {
+    const c = await api<ApiCollections>(
+      "/collections",
+      fresh ? {} : { revalidate: 60 },
+    );
+    const all: Collection[] = [
+      ...c.categories.map((x) => ({
+        slug: x.slug,
+        name: x.name,
+        kind: "category" as const,
+        blurb: x.blurb ?? "",
+        count: x.product_count,
+      })),
+      ...c.crafts.map((x) => ({
+        slug: x.slug,
+        name: titleOf(x.slug),
+        kind: "craft" as const,
+        blurb: "",
+        count: x.product_count,
+      })),
+      ...c.occasions.map((x) => ({
+        slug: x.slug,
+        name: titleOf(x.slug),
+        kind: "occasion" as const,
+        blurb: "",
+        count: x.product_count,
+      })),
+    ];
+    const seen = new Set<string>();
+    return all.filter(
+      (x) => SLUG.test(x.slug) && !seen.has(x.slug) && !!seen.add(x.slug),
+    );
+  },
+);
 
 export async function getCollection(
   slug: string,
@@ -307,12 +312,14 @@ export async function getCollection(
  * One cover image per collection. Walks collections in order and prefers a photo no earlier tile has used,
  * so tiles on the landing page and in the mega-menu don't repeat the same picture.
  */
-export async function collectionCovers(): Promise<Record<string, string>> {
+export async function collectionCovers(
+  fresh = false,
+): Promise<Record<string, string>> {
   const [catalogue, all] = await Promise.all([
-    getCatalogue(),
+    getCatalogue(fresh),
     api<
       Record<"categories" | "crafts" | "occasions", Record<string, string[]>>
-    >("/collections/covers", { revalidate: 300 }),
+    >("/collections/covers", fresh ? {} : { revalidate: 300 }),
   ]);
   const kinds = {
     category: all.categories,

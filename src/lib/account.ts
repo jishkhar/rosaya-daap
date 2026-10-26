@@ -16,6 +16,7 @@ export type OrderItem = {
   size: string | null;
 };
 export type ApiOrder = {
+  can_cancel: boolean;
   id: string;
   order_number: string;
   status: string;

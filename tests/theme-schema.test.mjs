@@ -36,6 +36,51 @@ test("heritage defaults match the schema exactly", () => {
   assert.deepEqual(resolveConfig(schema, defaults, defaults), defaults);
 });
 
+test("Rosaya neutral defaults survive storefront validation and ERP editor round trips", () => {
+  const { schema: referenceSchema } = load("../src/themes/rosaya/schema.ts");
+  const reference = JSON.parse(
+    fs.readFileSync(
+      new URL("../src/themes/rosaya/defaults.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.deepEqual(
+    resolveConfig(referenceSchema, reference, reference),
+    reference,
+  );
+  const portalModule = new URL(
+    "../../frontend/src/lib/themes.ts",
+    import.meta.url,
+  );
+  if (fs.existsSync(portalModule)) {
+    const { editableConfig } = load("../../frontend/src/lib/themes.ts");
+    const definition = {
+      key: "rosaya",
+      name: "Rosaya",
+      schema: referenceSchema,
+      defaults: reference,
+    };
+    assert.deepEqual(editableConfig(definition, {}), reference);
+    assert.deepEqual(editableConfig(definition, reference), reference);
+  }
+  const checkImages = (value) => {
+    if (!value || typeof value !== "object") return;
+    for (const [key, v] of Object.entries(value)) {
+      if (
+        (key === "image" || key === "logo") &&
+        typeof v === "string" &&
+        v.startsWith("/")
+      )
+        assert.ok(
+          fs.existsSync(new URL(`../public${v}`, import.meta.url)),
+          `Missing artwork: ${v}`,
+        );
+      checkImages(v);
+    }
+  };
+  checkImages(reference);
+});
+
 test("missing groups and templates come from the theme defaults", () => {
   const out = resolveConfig(
     schema,
@@ -174,10 +219,71 @@ test(
   },
 );
 
-test("neutral defaults carry nothing of Rosaya", () => {
-  assert.doesNotMatch(
-    JSON.stringify(defaults),
-    /rosaya|garba|saree|lehenga|kalamkari/i,
+test("both themes ship neutral content without bundled shop photography", () => {
+  for (const name of ["heritage", "rosaya"]) {
+    const config = JSON.parse(
+      fs.readFileSync(
+        new URL(`../src/themes/${name}/defaults.json`, import.meta.url),
+        "utf8",
+      ),
+    );
+    assert.doesNotMatch(
+      JSON.stringify(config),
+      /rosaya|garba|saree|lehenga|kalamkari|themes\/rosaya/i,
+    );
+    assert.equal(config.settings.brand.name, "");
+    assert.equal(config.settings.brand.logo, "");
+  }
+});
+
+const { collectionTiles } = load("../src/themes/rosaya/data.ts");
+test("Rosaya tiles follow current ERP covers, names and collection links", () => {
+  const choices = [
+    { slug: "silks", name: "Silks" },
+    {
+      slug: "collection-123",
+      name: "Edited collection",
+      image: "https://media.example/cover.webp",
+    },
+  ];
+  const items = [
+    { collection: "silks", label: "", image: "", href: "" },
+    { collection: "collection-123", label: "", image: "", href: "" },
+    { collection: "deleted", label: "Gone", image: "", href: "" },
+  ];
+  const out = collectionTiles(items, choices, {
+    silks: "https://media.example/product.webp",
+  });
+  assert.deepEqual(out, [
+    {
+      label: "Silks",
+      image: "https://media.example/product.webp",
+      href: "/c/silks",
+    },
+    {
+      label: "Edited collection",
+      image: "https://media.example/cover.webp",
+      href: "/c/collection-123",
+    },
+  ]);
+  assert.equal(
+    collectionTiles([items[0]], choices, {}).at(0).image,
+    "/placeholder.svg",
+  );
+  assert.deepEqual(collectionTiles([], choices, {}), []);
+  assert.equal(
+    collectionTiles(
+      [
+        {
+          ...items[0],
+          image: "https://media.example/upload.png",
+          label: "My title",
+        },
+      ],
+      choices,
+      {},
+    ).at(0).label,
+    "Silks",
   );
 });
 
@@ -214,11 +320,22 @@ test("empty identity fields come from the business", () => {
   );
 });
 
-test("storefront code shows no shop-specific text (every shop shares it)", () => {
+test("shared storefront code stays neutral outside the explicit Rosaya theme", () => {
   const offenders = [];
   const walk = (dir) =>
     fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
       const p = path.join(dir, e.name);
+      // A separately installable replica is intentionally branded. Its registration names it;
+      // shared commerce screens and the default Heritage theme must still stay neutral.
+      const relative = path.relative(
+        fileURLToPath(new URL("../src", import.meta.url)),
+        p,
+      );
+      if (
+        relative === path.join("themes", "rosaya") ||
+        relative === path.join("themes", "registry.ts")
+      )
+        return;
       if (e.isDirectory()) return walk(p);
       if (!/\.(ts|tsx)$/.test(e.name)) return;
       fs.readFileSync(p, "utf8")
@@ -241,4 +358,72 @@ test("storefront code shows no shop-specific text (every shop shares it)", () =>
     });
   walk(fileURLToPath(new URL("../src", import.meta.url)));
   assert.deepEqual(offenders, []);
+});
+
+test("legacy Rosaya tile overrides and saved menus cannot freeze catalogue data", () => {
+  const { schema: themeSchema } = load("../src/themes/rosaya/schema.ts");
+  const config = resolveConfig(
+    themeSchema,
+    {
+      settings: { header: { menu: [{ label: "Old menu" }] } },
+      templates: {
+        home: [
+          {
+            id: "categories",
+            type: "category-circles",
+            settings: {
+              items: [
+                {
+                  collection: "silks",
+                  label: "Old name",
+                  image: "https://old.example/photo.jpg",
+                  href: "/old",
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {},
+  );
+  assert.deepEqual(config.templates.home[0].settings.items, [
+    { collection: "silks" },
+  ]);
+  assert.equal(config.templates.home[0].settings.source, "all");
+  assert.equal(config.settings.header.menu_limit, 8);
+  assert.equal(config.settings.header.menu, undefined);
+});
+
+const { headerMenu } = load("../src/themes/rosaya/data.ts");
+test("Rosaya navigation follows ERP header visibility, ordering and dropdown names", () => {
+  const row = {
+    slug: "collection-a",
+    name: "A",
+    show_in_header: true,
+    header_order: 2,
+    header_dropdown: true,
+    dropdown_collections: [{ slug: "collection-child", name: "Updated child" }],
+  };
+  const choices = [
+    row,
+    { ...row, slug: "hidden", show_in_header: false },
+    {
+      ...row,
+      slug: "collection-b",
+      name: "B",
+      header_order: 1,
+      header_dropdown: false,
+    },
+  ];
+  assert.deepEqual(headerMenu(choices, 1), [
+    { label: "B", href: "/c/collection-b", children: [] },
+  ]);
+  assert.deepEqual(headerMenu([row], 8)[0].children, [
+    { label: "Updated child", href: "/c/collection-child" },
+  ]);
+  row.name = "Renamed";
+  assert.equal(headerMenu([row], 8)[0].label, "Renamed");
+  row.show_in_header = false;
+  assert.deepEqual(headerMenu([row], 8), []);
 });

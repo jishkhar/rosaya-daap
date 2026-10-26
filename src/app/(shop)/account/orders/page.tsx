@@ -17,6 +17,7 @@ import { useCart } from "@/lib/cart";
 import { call, goTo } from "@/lib/http";
 import { formatINR } from "@/lib/money";
 import { longDate, type Returnable } from "@/lib/returns";
+import { CancelOrder } from "@/components/account/CancelOrder";
 import { ButtonLink } from "@/components/ui/Button";
 
 const badge: Record<OrderStage, string> = {
@@ -45,9 +46,11 @@ export default function OrdersPage() {
     items: orders,
     ready,
     error,
+    reload,
   } = useRemoteList<ApiOrder>("/api/me/orders", !!user);
   const { add } = useCart();
   const [open, setOpen] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
 
   if (!ready)
@@ -76,6 +79,14 @@ export default function OrdersPage() {
   return (
     <div>
       <h1 className="font-heading text-3xl font-medium">Your Orders</h1>
+      {notice && (
+        <p
+          role="status"
+          className="mt-4 rounded-xl bg-success/10 p-3 text-sm text-success"
+        >
+          {notice}
+        </p>
+      )}
       {error && (
         <p
           role="alert"
@@ -150,6 +161,23 @@ export default function OrdersPage() {
                   />
                 </button>
 
+                {stage === "Delivered" && (
+                  <div className="border-t border-line p-4">
+                    <OrderReturns orderId={o.id} />
+                  </div>
+                )}
+                {o.can_cancel && (
+                  <div className="border-t border-line px-5 pb-4 pt-3">
+                    <CancelOrder
+                      order={o}
+                      onCancelled={async (message) => {
+                        setNotice(message);
+                        await reload();
+                      }}
+                    />
+                  </div>
+                )}
+
                 {isOpen && (
                   <div className="space-y-6 border-t border-line p-5">
                     {stage !== "Cancelled" && stage !== "Placed" && (
@@ -218,8 +246,6 @@ export default function OrdersPage() {
                         </li>
                       ))}
                     </ul>
-
-                    {stage === "Delivered" && <OrderReturns orderId={o.id} />}
 
                     <div className="flex flex-wrap items-end justify-between gap-4 text-sm">
                       <div className="space-y-1 text-ink-soft">

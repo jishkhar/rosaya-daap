@@ -2,7 +2,7 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 import { storeHost } from "@/lib/api";
 import { PATH_HEADER } from "@/proxy";
-import { PREVIEW_COOKIE } from "@/themes/preview";
+import { LIVE_PREVIEW_COOKIE, PREVIEW_COOKIE } from "@/themes/preview";
 
 const ONE_SHOP = !!process.env.STORE_CHANNEL_KEY;
 
@@ -30,7 +30,9 @@ export async function primaryRedirect(
   if (ONE_SHOP || !primaryHost) return null;
   const visited = hostname(await storeHost());
   if (!visited || visited === hostname(primaryHost)) return null;
-  if ((await cookies()).get(PREVIEW_COOKIE)) return null;
+  const jar = await cookies();
+  if (jar.get(PREVIEW_COOKIE) || jar.get(LIVE_PREVIEW_COOKIE)?.value === "1")
+    return null;
   const path = (await headers()).get(PATH_HEADER) ?? "/";
   return `${await originOf(primaryHost)}${path.startsWith("/") ? path : "/"}`;
 }

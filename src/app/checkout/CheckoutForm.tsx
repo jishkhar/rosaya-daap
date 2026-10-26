@@ -17,7 +17,6 @@ import {
 import { CouponBox } from "@/components/cart/CouponBox";
 import { Totals } from "@/components/cart/Totals";
 import { OrderConfirmationModal } from "@/components/checkout/OrderConfirmationModal";
-import { Logo } from "@/components/ui/Logo";
 import { type Address as SavedAddress } from "@/lib/account";
 import { useAuth } from "@/lib/auth";
 import type { User } from "@/lib/auth";
@@ -357,14 +356,6 @@ export default function CheckoutForm({
 
   return (
     <div className="min-h-screen bg-[#f7f3ed] pb-8">
-      <header className="border-b border-line bg-white/80">
-        <div className="mx-auto flex max-w-[1160px] items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <Logo />
-          <p className="flex items-center gap-1.5 text-[11px] text-ink-soft">
-            <Lock className="h-3.5 w-3.5" /> Secure checkout
-          </p>
-        </div>
-      </header>
       <div className="mx-auto max-w-[1160px] px-4 py-5 sm:px-6 sm:py-7">
         <Link
           href="/cart"

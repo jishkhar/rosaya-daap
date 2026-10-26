@@ -1,0 +1,206 @@
+{
+  "settings": {
+    "brand": {
+      "name": "",
+      "tagline": "",
+      "logo": ""
+    },
+    "announcement": {
+      "enabled": false,
+      "text": "Welcome to our store",
+      "href": "/shop"
+    },
+    "header": {
+      "show_search": true,
+      "menu_limit": 8
+    },
+    "footer": {
+      "marquee": "",
+      "columns": [
+        {
+          "title": "Shop",
+          "links": [
+            {
+              "label": "All products",
+              "href": "/shop"
+            },
+            {
+              "label": "Collections",
+              "href": "/collections"
+            }
+          ],
+          "store_collections": true
+        },
+        {
+          "title": "Help",
+          "links": [
+            {
+              "label": "Contact us",
+              "href": "/contact"
+            },
+            {
+              "label": "Shipping",
+              "href": "/help/shipping"
+            },
+            {
+              "label": "Returns",
+              "href": "/help/returns"
+            }
+          ],
+          "store_collections": false
+        },
+        {
+          "title": "Company",
+          "links": [
+            {
+              "label": "About us",
+              "href": "/about"
+            },
+            {
+              "label": "Privacy policy",
+              "href": "/privacy"
+            },
+            {
+              "label": "Terms of service",
+              "href": "/terms"
+            }
+          ],
+          "store_collections": false
+        }
+      ],
+      "newsletter_title": "Subscribe to our newsletter",
+      "newsletter_url": "",
+      "email": "",
+      "social_title": "Follow Us",
+      "facebook": "",
+      "instagram": "",
+      "youtube": "",
+      "copyright": "",
+      "payment_title": "Payment Methods",
+      "payments": [
+        {
+          "label": "American Express",
+          "image": "/payment-icons/payment-0.svg"
+        },
+        {
+          "label": "Diners Club",
+          "image": "/payment-icons/payment-1.svg"
+        },
+        {
+          "label": "Maestro",
+          "image": "/payment-icons/payment-2.svg"
+        },
+        {
+          "label": "Mastercard",
+          "image": "/payment-icons/payment-3.svg"
+        },
+        {
+          "label": "RuPay",
+          "image": "/payment-icons/payment-4.svg"
+        },
+        {
+          "label": "Visa",
+          "image": "/payment-icons/payment-5.svg"
+        }
+      ]
+    },
+    "pages": {
+      "about": "",
+      "care": "",
+      "faq": ""
+    }
+  },
+  "templates": {
+    "home": [
+      {
+        "id": "slideshow",
+        "type": "slideshow",
+        "settings": {
+          "slides": [
+            {
+              "collection": "",
+              "image": "",
+              "alt": "Our latest arrivals",
+              "label": "Shop now",
+              "href": "/shop"
+            }
+          ],
+          "autoplay": true
+        }
+      },
+      {
+        "id": "category-circles",
+        "type": "category-circles",
+        "settings": {
+          "title": "Shop by category",
+          "items": [],
+          "source": "all",
+          "limit": 12
+        }
+      },
+      {
+        "id": "occasions",
+        "type": "occasions",
+        "settings": {
+          "title": "Find your occasion",
+          "items": [],
+          "source": "all",
+          "limit": 5
+        }
+      },
+      {
+        "id": "crafts",
+        "type": "crafts",
+        "settings": {
+          "title": "Made with care",
+          "text": "Discover the stories behind our collections",
+          "items": [],
+          "source": "all",
+          "limit": 8
+        }
+      },
+      {
+        "id": "promises",
+        "type": "promises",
+        "settings": {
+          "items": [
+            {
+              "icon": "box",
+              "title": "Delivery",
+              "text": "Contact us for delivery details."
+            },
+            {
+              "icon": "star",
+              "title": "Quality",
+              "text": "Selected with care."
+            },
+            {
+              "icon": "tag",
+              "title": "Value",
+              "text": "Discover our latest offers."
+            }
+          ]
+        }
+      },
+      {
+        "id": "image-banner",
+        "type": "image-banner",
+        "settings": {
+          "image": "",
+          "alt": "",
+          "href": ""
+        }
+      },
+      {
+        "id": "collection-cards",
+        "type": "collection-cards",
+        "settings": {
+          "title": "Explore our collections",
+          "items": [],
+          "source": "all",
+          "limit": 3
+        }
+      }
+    ]
+  }
+}

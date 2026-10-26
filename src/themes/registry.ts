@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import { api, ApiError } from "@/lib/api";
 import { heritage } from "@/themes/heritage";
-import { PREVIEW_COOKIE } from "@/themes/preview";
+import { rosaya } from "@/themes/rosaya";
+import { LIVE_PREVIEW_COOKIE, PREVIEW_COOKIE } from "@/themes/preview";
 import {
   resolveConfig,
   withIdentity,
@@ -13,7 +14,7 @@ import {
 import type { Shipping } from "@/lib/shipping";
 import type { Theme } from "@/themes/types";
 
-export const themes: Record<string, Theme> = { heritage };
+export const themes: Record<string, Theme> = { heritage, rosaya };
 
 const LIVE_REVALIDATE = 30; // seconds a publish takes to reach shoppers
 
@@ -46,16 +47,23 @@ export const getStorefront = cache(
     /** The shop's delivery fee and time; null when unknown. */
     shipping: Shipping | null;
   }> => {
-    const token = (await cookies()).get(PREVIEW_COOKIE)?.value;
+    const jar = await cookies();
+    const livePreview = jar.get(LIVE_PREVIEW_COOKIE)?.value === "1";
+    const token = livePreview ? undefined : jar.get(PREVIEW_COOKIE)?.value;
     let data: StoreTheme | null = null;
     let status: ShopStatus = "open";
     if (token)
       data = await api<StoreTheme>("/theme", { preview: token }).catch(
         () => null,
       ); // expired -> the live theme
-    data ??= await api<StoreTheme>("/theme", {
-      revalidate: LIVE_REVALIDATE,
-    }).catch((e) => {
+    data ??= await api<StoreTheme>(
+      "/theme",
+      livePreview
+        ? {}
+        : {
+            revalidate: LIVE_REVALIDATE,
+          },
+    ).catch((e) => {
       if (e instanceof ApiError && e.status === 404) status = "missing";
       else if (e instanceof ApiError && e.status === 403) status = "closed";
       return null; // anything else (API down): render the default theme; pages show their own "unavailable" notices

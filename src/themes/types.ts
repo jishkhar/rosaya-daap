@@ -20,6 +20,8 @@ export type SectionDef<D = unknown> = {
 export type Theme = {
   key: string;
   name: string;
+  /** Optional scoped body class for a theme's site-wide presentation. */
+  className?: string;
   schema: ThemeSchema;
   /** Starting config for a new install; also fills any group or template missing from a saved config. */
   defaults: unknown;

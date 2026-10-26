@@ -11,6 +11,7 @@ function load({
   host,
   path: requested = "/",
   preview = false,
+  livePreview = false,
   oneShop = false,
 }) {
   process.env.STORE_CHANNEL_KEY = oneShop ? "key" : "";
@@ -31,12 +32,19 @@ function load({
       headers: async () => new Map([["x-store-path", requested]]),
       cookies: async () => ({
         get: (name) =>
-          preview && name === "theme_preview" ? { value: "t" } : undefined,
+          preview && name === "theme_preview"
+            ? { value: "t" }
+            : livePreview && name === "theme_live_preview"
+              ? { value: "1" }
+              : undefined,
       }),
     },
     "@/lib/api": { storeHost: async () => host },
     "@/proxy": { PATH_HEADER: "x-store-path" },
-    "@/themes/preview": { PREVIEW_COOKIE: "theme_preview" },
+    "@/themes/preview": {
+      PREVIEW_COOKIE: "theme_preview",
+      LIVE_PREVIEW_COOKIE: "theme_live_preview",
+    },
   };
   const requireModule = unit.require.bind(unit);
   unit.require = (name) => stubs[name] ?? requireModule(name);
@@ -112,4 +120,14 @@ test("a path that isn't a path never leaves the shop", async () => {
     path: "https://evil.example/x",
   });
   assert.equal(await primaryRedirect("rosaya.in"), "https://rosaya.in/");
+});
+
+test("live portal previews remain on the hostname holding the preview cookies", async () => {
+  assert.equal(
+    await load({
+      host: "rosaya.ecommerce.daaprimetech.com",
+      livePreview: true,
+    }).primaryRedirect("rosaya.in"),
+    null,
+  );
 });
