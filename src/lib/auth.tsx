@@ -14,13 +14,17 @@ export type User = {
   name: string;
   email: string;
   phone: string | null;
-  segment: "new" | "regular" | "vip" | "inactive";
+  birthday: string | null;
+  membership: { eligible: boolean; joined_at: string | null };
+  segment:
+    "regular" | "silver" | "gold" | "platinum" | "inactive" | "not_member";
   loyalty: {
     points: number;
-    vip_min_points: number;
+    next_tier: "silver" | "gold" | "platinum" | null;
+    next_tier_points: number;
     points_per_100: number;
-    points_to_vip: number;
-    spend_to_vip_minor: number | null;
+    points_to_next_tier: number;
+    spend_to_next_tier_minor: number | null;
   };
 };
 type Result = { ok: true } | { ok: false; error: string };
@@ -35,7 +39,17 @@ type Ctx = {
     phone?: string;
   }) => Promise<Result>;
   logout: () => Promise<void>;
-  updateProfile: (v: { name?: string; phone?: string }) => Promise<Result>;
+  updateProfile: (v: {
+    name?: string;
+    phone?: string;
+    birthday?: string;
+  }) => Promise<Result>;
+  enrollMembership: (v: {
+    name: string;
+    birthday: string;
+    phone: string;
+    email: string;
+  }) => Promise<Result>;
   refreshUser: () => Promise<void>;
 };
 
@@ -79,6 +93,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout: async () => {
       await call("/api/auth/logout", { method: "POST", body: {} });
       setUser(null);
+    },
+    enrollMembership: async (v) => {
+      const r = await call<User>("/api/me/membership", {
+        method: "POST",
+        body: v,
+      });
+      if (!r.ok) return { ok: false, error: r.error };
+      setUser(r.data);
+      return { ok: true };
     },
     updateProfile: async (v) => {
       const r = await call<User>("/api/me", { method: "PATCH", body: v });

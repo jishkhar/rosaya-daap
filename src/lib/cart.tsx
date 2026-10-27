@@ -39,6 +39,7 @@ export type QuoteLine = {
 };
 export type Quote = {
   loyalty: {
+    eligible?: boolean;
     balance_points: number;
     conversion_points: number;
     conversion_value_minor: number;

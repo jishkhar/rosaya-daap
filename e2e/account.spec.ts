@@ -28,7 +28,7 @@ test("register, save an address, pay online, see the order, reorder, sign out an
   await page
     .getByLabel("Address", { exact: true })
     .fill("12 MG Road, Navrangpura");
-  await page.getByLabel("Pincode").fill("380009");
+  await page.getByLabel("Pincode", { exact: true }).fill("380009");
   await page.getByLabel("City").fill("Ahmedabad");
   await expect(page.getByLabel("State")).toHaveValue("Gujarat"); // from the pincode
   await page.getByRole("button", { name: "Save address" }).click();
@@ -47,7 +47,9 @@ test("register, save an address, pay online, see the order, reorder, sign out an
   await expect(page.getByLabel("Address", { exact: true })).toHaveValue(
     "12 MG Road, Navrangpura",
   );
-  await expect(page.getByLabel("Pincode")).toHaveValue("380009");
+  await expect(page.getByLabel("Pincode", { exact: true })).toHaveValue(
+    "380009",
+  );
   await expect(page.getByLabel("City")).toHaveValue("Ahmedabad");
   await expect(page.getByLabel("State")).toHaveValue("Gujarat");
   expect(browserAddressRequests).toEqual([]);
@@ -62,12 +64,9 @@ test("register, save an address, pay online, see the order, reorder, sign out an
   );
   await expect(
     page.getByRole("button", { name: /continue to payment/i }),
-  ).toHaveCount(0);
-  await page.getByRole("button", { name: /^Pay · / }).click();
-  await page
-    .getByRole("dialog", { name: "Choose payment method" })
-    .getByRole("button", { name: /^Pay online ·/ })
-    .click();
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Continue to payment" }).click();
+  await page.getByRole("button", { name: /^Pay online ·/ }).click();
   await expect(page).toHaveURL(/\/pay\//);
   await page.getByRole("button", { name: /pay now \(test\)/i }).click();
   await expect(page).toHaveURL(/\/checkout\?order=[0-9a-f-]+$/);

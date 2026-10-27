@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, Eye, EyeOff } from "lucide-react";
-import { MembershipCard } from "@/components/account/MembershipCard";
+import { MembershipEnrollment } from "@/components/account/MembershipEnrollment";
 import { useAuth } from "@/lib/auth";
 import { call } from "@/lib/http";
 
@@ -12,6 +12,7 @@ const input =
 export default function ProfilePage() {
   const { user, updateProfile, refreshUser } = useAuth();
   const [name, setName] = useState<string | null>(null);
+  const [birthday, setBirthday] = useState<string | null>(null);
   const [phone, setPhone] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -37,6 +38,10 @@ export default function ProfilePage() {
   }, [customerId, refreshUser]);
   if (!user) return null;
   const value = name ?? user.name;
+  const birthdayValue = birthday ?? user.birthday ?? "";
+  const isMember = user.membership?.eligible === true;
+  const today = new Date();
+  const maxBirthday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
   const phoneValue = phone ?? (user.phone ?? "").replace(/^\+91/, "");
 
@@ -46,17 +51,22 @@ export default function ProfilePage() {
     setSaveError(null);
     setSaved(false);
     if (value.trim().length < 2) return setSaveError("Enter your full name.");
-    if (phoneValue && !/^[6-9]\d{9}$/.test(phoneValue))
+    if ((isMember && !birthdayValue) || birthdayValue > maxBirthday)
+      return setSaveError("Enter a valid date of birth.");
+    if ((isMember || phoneValue) && !/^[6-9]\d{9}$/.test(phoneValue))
       return setSaveError("Enter a valid 10-digit mobile number.");
     setSaving(true);
     try {
-      const r = await updateProfile({
+      const details = {
         name: value.trim(),
+        ...(birthdayValue ? { birthday: birthdayValue } : {}),
         ...(phoneValue ? { phone: phoneValue } : {}),
-      });
+      };
+      const r = await updateProfile(details);
       if (!r.ok) return setSaveError(r.error);
       setName(null);
       setPhone(null);
+      setBirthday(null);
       setSaved(true);
     } catch {
       setSaveError("Couldn't save your profile. Please try again.");
@@ -92,8 +102,7 @@ export default function ProfilePage() {
   return (
     <div>
       <h1 className="font-heading text-3xl font-medium">Profile</h1>
-
-      <MembershipCard user={user} />
+      <MembershipEnrollment user={user} />
 
       <div className="mt-6">
         <div className="grid min-w-0 items-start gap-6 xl:grid-cols-2">
@@ -112,6 +121,8 @@ export default function ProfilePage() {
               </label>
               <input
                 id="p-name"
+                required
+                minLength={2}
                 autoComplete="name"
                 value={value}
                 disabled={saving}
@@ -125,6 +136,29 @@ export default function ProfilePage() {
             </div>
             <div>
               <label
+                htmlFor="p-birthday"
+                className="mb-1.5 block text-sm font-medium"
+              >
+                Date of birth
+              </label>
+              <input
+                id="p-birthday"
+                type="date"
+                autoComplete="bday"
+                required={isMember}
+                max={maxBirthday}
+                value={birthdayValue}
+                disabled={saving}
+                className={input}
+                onChange={(event) => {
+                  setBirthday(event.target.value);
+                  setSaved(false);
+                  setSaveError(null);
+                }}
+              />
+            </div>
+            <div>
+              <label
                 htmlFor="p-email"
                 className="mb-1.5 block text-sm font-medium"
               >
@@ -132,6 +166,8 @@ export default function ProfilePage() {
               </label>
               <input
                 id="p-email"
+                type="email"
+                required
                 value={user.email}
                 readOnly
                 className={`${input} bg-sand/60 text-ink-soft`}
@@ -153,6 +189,7 @@ export default function ProfilePage() {
                 </span>
                 <input
                   id="p-phone"
+                  required={isMember}
                   inputMode="numeric"
                   maxLength={10}
                   autoComplete="tel-national"

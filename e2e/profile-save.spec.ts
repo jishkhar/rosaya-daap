@@ -8,13 +8,16 @@ test("profile save shows progress, persists values, and explains errors", async 
     name: "Asha Rao",
     email: "asha@example.test",
     phone: "+919876543210",
+    birthday: "1990-03-14",
+    membership: { eligible: true, joined_at: "2026-01-01T00:00:00Z" },
     segment: "regular",
     loyalty: {
       points: 25,
-      vip_min_points: 100,
+      next_tier: "silver",
+      next_tier_points: 100,
       points_per_100: 1,
-      points_to_vip: 75,
-      spend_to_vip_minor: 750000,
+      points_to_next_tier: 75,
+      spend_to_next_tier_minor: 750000,
     },
   };
   let saves = 0;

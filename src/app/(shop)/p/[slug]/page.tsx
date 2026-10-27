@@ -95,7 +95,7 @@ export default async function ProductPage({ params }: Props) {
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[1.15fr_1fr] lg:gap-14">
         <Gallery images={p.images} title={p.title} />
-        <div className="lg:sticky lg:top-28 lg:self-start">
+        <div className="lg:sticky lg:top-[calc(var(--store-header-height)+1rem)] lg:self-start">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-taupe-dark">
             {p.category}
           </p>

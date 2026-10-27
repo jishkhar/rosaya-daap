@@ -4,15 +4,18 @@ import { useBrand } from "@/lib/brand";
 import { formatINR } from "@/lib/money";
 
 const tiers = {
-  new: "New",
+  silver: "Silver",
+  gold: "Gold",
   regular: "Regular",
-  vip: "VIP",
+  platinum: "Platinum",
+  not_member: "Not a member",
   inactive: "Inactive",
 };
 
 export function MembershipCard({ user }: { user: User }) {
   const loyalty = user.loyalty;
-  const vip = user.segment === "vip";
+  const highest = !loyalty.next_tier;
+  const nextTier = loyalty.next_tier ? tiers[loyalty.next_tier] : "Platinum";
   const tier = tiers[user.segment];
   const { name } = useBrand();
 
@@ -44,7 +47,7 @@ export function MembershipCard({ user }: { user: User }) {
             </p>
           )}
           <span
-            aria-label={`Customer segment: ${tier}`}
+            aria-label={`Customer membership: ${tier}`}
             className="rounded-full border border-[#e8bb6b]/25 px-3 py-1 text-xs font-medium text-[#f2d7a5]"
           >
             {tier}
@@ -54,7 +57,7 @@ export function MembershipCard({ user }: { user: User }) {
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-serif text-xl font-medium tracking-tight">
-          {tier} {vip ? "Tier Member" : "Member"}
+          {tier} Member
         </h3>
         {loyalty && (
           <div className="flex flex-wrap gap-2 text-[10px] text-[#f0e2dc]">
@@ -73,7 +76,7 @@ export function MembershipCard({ user }: { user: User }) {
       {loyalty && (
         <>
           <div className="mt-2 border-t border-white/10 pt-2">
-            {vip ? (
+            {highest ? (
               <div className="flex items-start gap-3">
                 <Sparkles
                   aria-hidden="true"
@@ -81,7 +84,7 @@ export function MembershipCard({ user }: { user: User }) {
                 />
                 <div>
                   <p className="font-medium text-[#f2d7a5]">
-                    You&apos;ve reached VIP, our highest tier.
+                    Your points meet the Platinum threshold, our highest tier.
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-[#d6c4be]">
                     Keep earning and redeeming points on your next favourites.
@@ -91,40 +94,42 @@ export function MembershipCard({ user }: { user: User }) {
             ) : (
               <>
                 <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <p className="font-medium">Progress to VIP</p>
+                  <p className="font-medium">Progress to {nextTier}</p>
                   <p className="tabular-nums text-[#f2d7a5]">
                     {Math.max(0, loyalty.points).toLocaleString("en-IN")}{" "}
                     <span className="text-[#d6c4be]">
-                      / {loyalty.vip_min_points.toLocaleString("en-IN")} points
+                      / {loyalty.next_tier_points.toLocaleString("en-IN")}{" "}
+                      points
                     </span>
                   </p>
                 </div>
                 <progress
-                  aria-label="Progress to VIP"
+                  aria-label={`Progress to ${nextTier}`}
                   className="block h-2 w-full overflow-hidden rounded-full border-0 bg-white/15 [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-[linear-gradient(90deg,#a62f40,#eba92f)] [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-white/15 [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-[linear-gradient(90deg,#a62f40,#eba92f)]"
-                  max={Math.max(1, loyalty.vip_min_points)}
+                  max={Math.max(1, loyalty.next_tier_points)}
                   value={Math.max(
                     0,
-                    Math.min(loyalty.points, loyalty.vip_min_points),
+                    Math.min(loyalty.points, loyalty.next_tier_points),
                   )}
                 />
                 <p className="mt-1.5 text-xs leading-snug text-[#d6c4be]">
-                  {loyalty.spend_to_vip_minor != null ? (
+                  {loyalty.spend_to_next_tier_minor != null ? (
                     <>
                       Spend{" "}
                       <strong className="font-semibold text-[#fff5e5]">
-                        {formatINR(loyalty.spend_to_vip_minor / 100)}
+                        {formatINR(loyalty.spend_to_next_tier_minor / 100)}
                       </strong>{" "}
-                      more to reach VIP.{" "}
+                      more to reach {nextTier}.{" "}
                     </>
                   ) : (
                     <>
                       Purchase points are currently disabled; bonus points can
-                      still move you towards VIP.{" "}
+                      still move you towards {nextTier}.{" "}
                     </>
                   )}
                   <strong className="font-medium text-[#f2d7a5]">
-                    {loyalty.points_to_vip.toLocaleString("en-IN")} more points
+                    {loyalty.points_to_next_tier.toLocaleString("en-IN")} more
+                    points
                   </strong>{" "}
                   to your next milestone.
                 </p>

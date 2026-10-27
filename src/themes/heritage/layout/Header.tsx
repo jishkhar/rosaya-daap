@@ -49,7 +49,7 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-cream/95 backdrop-blur">
-      <div className="mx-auto flex h-[var(--store-header-height)] max-w-[1400px] items-center gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex h-[var(--store-header-height)] max-w-[1400px] items-center gap-1 px-3 min-[360px]:gap-3 min-[360px]:px-4 sm:px-6">
         <button
           className="touch-target -ml-2 rounded-full p-2 hover:bg-sand xl:hidden"
           aria-label="Open menu"
@@ -57,7 +57,7 @@ export function Header({
         >
           <Menu className="h-6 w-6" />
         </button>
-        <Logo />
+        <Logo className="min-w-0 [&>img]:shrink-0 [&>span]:min-w-0 [&>span>span]:truncate max-[389px]:gap-1.5 max-[389px]:[&>img]:size-8 max-[389px]:[&>span>span]:text-base max-[389px]:[&>span>span]:tracking-[0.2em]" />
 
         <nav
           aria-label="Main"
