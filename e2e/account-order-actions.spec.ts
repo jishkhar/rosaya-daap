@@ -64,13 +64,14 @@ test("account orders expose returns and confirm cancellation with retry", async 
           name: "Test customer",
           email: "fixture@example.test",
           phone: null,
-          segment: "new",
+          segment: "regular",
           loyalty: {
             points: 0,
-            vip_min_points: 100,
+            next_tier: "silver",
+            next_tier_points: 100,
             points_per_100: 1,
-            points_to_vip: 100,
-            spend_to_vip_minor: null,
+            points_to_next_tier: 100,
+            spend_to_next_tier_minor: null,
           },
         },
       };

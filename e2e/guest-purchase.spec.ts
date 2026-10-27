@@ -51,9 +51,9 @@ test("browse, filter, add to bag, coupon, register and check out with cash on de
   await registerShopper(page);
   await expect(page).toHaveURL(/\/checkout$/);
   await fillAddress(page, { phone: "9876543210" });
-  await page.getByRole("button", { name: /^Pay ·/ }).click();
+  await page.getByRole("button", { name: "Continue to payment" }).click();
   await page
-    .getByRole("dialog", { name: "Choose payment method" })
+    .getByRole("tabpanel", { name: "Payment", exact: true })
     .getByText("Cash on delivery")
     .click();
   await page.getByRole("button", { name: /place order/i }).click();
@@ -86,8 +86,8 @@ test("a pincode we don't serve is refused before payment is offered", async ({
   await addFirstProductToBag(page);
   await page.goto("/checkout");
   await page.getByLabel("Mobile number").fill("9876543210");
-  await page.getByLabel("Pincode").fill("12345");
-  await page.getByRole("button", { name: /^Pay ·/ }).click();
+  await page.getByLabel("Pincode", { exact: true }).fill("12345");
+  await page.getByRole("button", { name: "Continue to payment" }).click();
   await expect(
     page.locator("[role=alert]:not(#__next-route-announcer__)").first(),
   ).toBeVisible();

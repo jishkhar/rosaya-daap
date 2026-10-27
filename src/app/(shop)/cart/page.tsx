@@ -55,8 +55,8 @@ export default function CartPage() {
           </ButtonLink>
         </div>
       ) : (
-        <div className="grid gap-8 lg:grid-cols-[1fr_380px] lg:gap-12">
-          <div>
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-12">
+          <div className="min-w-0">
             <div className="mb-6 rounded-2xl border border-line bg-white p-5">
               <FreeShippingBar />
             </div>
@@ -69,12 +69,12 @@ export default function CartPage() {
                       alt=""
                       width={110}
                       height={146}
-                      className="h-[146px] w-[110px] rounded-xl object-cover"
+                      className="h-[104px] w-20 rounded-xl object-cover sm:h-[146px] sm:w-[110px]"
                     />
                   </Link>
                   <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex justify-between gap-4">
-                      <div>
+                      <div className="min-w-0">
                         <Link
                           href={`/p/${i.slug}`}
                           className="line-clamp-2 font-medium hover:underline"
@@ -93,7 +93,7 @@ export default function CartPage() {
                         {formatINR(i.price * i.qty)}
                       </p>
                     </div>
-                    <div className="mt-auto flex items-center justify-between pt-3">
+                    <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
                       <Qty qty={i.qty} onChange={(q) => setQty(i.key, q)} />
                       <div className="flex items-center gap-3">
                         <p className="font-semibold sm:hidden">
@@ -120,7 +120,7 @@ export default function CartPage() {
             </Link>
           </div>
 
-          <aside className="h-fit space-y-6 rounded-2xl border border-line bg-white p-6 lg:sticky lg:top-28">
+          <aside className="h-fit min-w-0 space-y-6 rounded-2xl border border-line bg-white p-4 sm:p-6 lg:sticky lg:top-[calc(var(--store-header-height)+1rem)]">
             <h2 className="font-heading text-xl">Order summary</h2>
             <CouponBox />
             <Totals />

@@ -3,7 +3,7 @@ import { addFirstProductToBag, registerShopper, fillAddress } from "./helpers";
 
 const expect = baseExpect.configure({ timeout: 30_000 });
 
-test("pay opens payment options after validation and customer offers can be applied", async ({
+test("delivery advances to the payment tab after validation and customer offers can be applied", async ({
   page,
   isMobile,
 }, testInfo) => {
@@ -58,8 +58,22 @@ test("pay opens payment options after validation and customer offers can be appl
     page.getByRole("heading", { name: "Checkout", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("list", { name: "Checkout progress" }),
+    page.getByRole("tablist", { name: "Checkout progress" }),
   ).toBeVisible();
+  const originalViewport = page.viewportSize()!;
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const summary = page.getByRole("complementary", {
+      name: "Order summary and payment",
+    });
+    const summaryBox = await summary.boundingBox();
+    expect(summaryBox!.x).toBeGreaterThanOrEqual(0);
+    expect(summaryBox!.x + summaryBox!.width).toBeLessThanOrEqual(width);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+  }
+  await page.setViewportSize(originalViewport);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -77,14 +91,16 @@ test("pay opens payment options after validation and customer offers can be appl
     name: "Order summary",
     exact: true,
   });
-  const payment = column.getByRole("button", { name: /^Pay ·|Updating total/ });
+  const payment = column.getByRole("button", {
+    name: /Continue to payment|Updating total/,
+  });
   await expect(summary).toBeVisible();
   await expect(payment).toBeVisible();
   await expect(
     page.getByRole("radiogroup", { name: "Payment method" }),
   ).not.toBeVisible();
   await expect(
-    column.getByRole("button", { name: /^Pay ·|Updating total/ }),
+    column.getByRole("button", { name: /Continue to payment|Updating total/ }),
   ).toBeVisible();
   expect(
     await payment.evaluate(
@@ -106,9 +122,8 @@ test("pay opens payment options after validation and customer offers can be appl
   }
 
   await expect(
-    column.getByRole("button", { name: "Apply coupon SAVE10" }),
-  ).not.toBeVisible();
-  await column.getByText("Available coupons", { exact: true }).click();
+    column.getByRole("list", { name: "Coupon offers" }),
+  ).toBeVisible();
   await expect(
     column.getByRole("button", { name: "Apply coupon SAVE10" }),
   ).toBeEnabled();
@@ -118,27 +133,34 @@ test("pay opens payment options after validation and customer offers can be appl
   await column.getByRole("button", { name: "Apply coupon SAVE10" }).click();
   await expect(column.getByText(/SAVE10 applied/)).toBeVisible();
   await expect(column.getByText("Discount (SAVE10)")).toBeVisible();
-  await expect(column.getByRole("button", { name: /^Pay ·/ })).toBeEnabled();
+  await expect(
+    column.getByRole("button", { name: "Continue to payment" }),
+  ).toBeEnabled();
   let submitted = false;
   page.on("request", (request) => {
     if (request.url().endsWith("/api/checkout") && request.method() === "POST")
       submitted = true;
   });
-  await column.getByRole("button", { name: /^Pay ·/ }).click();
+  await column.getByRole("button", { name: "Continue to payment" }).click();
   await expect(
     page.getByText("Enter a valid 10-digit mobile number."),
   ).toBeVisible();
   expect(submitted).toBe(false);
   await fillAddress(page, { phone: "9876543210" });
-  await expect(column.getByRole("button", { name: /^Pay ·/ })).toBeEnabled();
   await expect(
-    page.getByRole("dialog", { name: "Choose payment method" }),
+    column.getByRole("button", { name: "Continue to payment" }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("tabpanel", { name: "Payment", exact: true }),
   ).not.toBeVisible();
-  await column.getByRole("button", { name: /^Pay ·/ }).click();
-  const dialog = page.getByRole("dialog", { name: "Choose payment method" });
-  await expect(dialog).toBeVisible();
+  await column.getByRole("button", { name: "Continue to payment" }).click();
+  const paymentPanel = page.getByRole("tabpanel", {
+    name: "Payment",
+    exact: true,
+  });
+  await expect(paymentPanel).toBeVisible();
   expect(submitted).toBe(false);
-  await dialog.getByRole("radio", { name: /Cash on delivery/ }).check();
+  await paymentPanel.getByRole("radio", { name: /Cash on delivery/ }).check();
   await page.route("**/api/checkout", async (route) => {
     const order = route.request().postDataJSON();
     expect(order.payment_method).toBe("cod");
@@ -151,11 +173,11 @@ test("pay opens payment options after validation and customer offers can be appl
       },
     });
   });
-  await dialog.getByRole("button", { name: /^Place order/ }).click();
-  await expect(dialog.getByRole("alert")).toHaveText("Test order stopped.");
+  await column.getByRole("button", { name: /^Place order/ }).click();
+  await expect(column.getByRole("alert")).toContainText("Test order stopped.");
   expect(submitted).toBe(true);
-  await dialog.getByRole("button", { name: "Close payment options" }).click();
-  await expect(dialog).not.toBeVisible();
+  await paymentPanel.getByRole("button", { name: "Back to delivery" }).click();
+  await expect(paymentPanel).not.toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("checkout.png"),
     fullPage: true,

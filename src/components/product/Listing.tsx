@@ -52,7 +52,7 @@ export async function Listing({
   return (
     <div className="grid gap-8 lg:grid-cols-[260px_1fr] lg:gap-12">
       <aside className="hidden lg:block">
-        <div className="sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 no-scrollbar">
+        <div className="sticky top-[calc(var(--store-header-height)+1rem)] max-h-[calc(100dvh-var(--store-header-height)-2rem)] overflow-y-auto pr-2 no-scrollbar">
           <p className="border-b border-line pb-3 font-heading text-lg uppercase tracking-[0.12em]">
             Filters
           </p>

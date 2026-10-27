@@ -49,11 +49,13 @@ test("Rosaya neutral defaults survive storefront validation and ERP editor round
     reference,
   );
   const portalModule = new URL(
-    "../../frontend/src/lib/themes.ts",
+    "../../shopconnect-tenant/src/lib/themes.ts",
     import.meta.url,
   );
   if (fs.existsSync(portalModule)) {
-    const { editableConfig } = load("../../frontend/src/lib/themes.ts");
+    const { editableConfig } = load(
+      "../../shopconnect-tenant/src/lib/themes.ts",
+    );
     const definition = {
       key: "rosaya",
       name: "Rosaya",
@@ -194,10 +196,10 @@ test("sections: unknown types dropped, ids fixed, capped", () => {
 });
 
 const { withIdentity } = load("../src/themes/schema.ts");
-// Find either local checkout name; seed-dependent checks skip in standalone storefront CI.
+// Find either local checkout name (current or legacy); seed-dependent checks skip in standalone storefront CI.
 const rosayaFixture = [
-  "../../backend/db/seed/rosaya_theme.json",
   "../../shopconnect-backend/db/seed/rosaya_theme.json",
+  "../../backend/db/seed/rosaya_theme.json",
   "../../erp-ecommerce-backend/db/seed/rosaya_theme.json",
 ]
   .map((relative) => new URL(relative, import.meta.url))

@@ -12,7 +12,6 @@ import {
   MapPin,
   ShoppingBag,
   Truck,
-  X,
 } from "lucide-react";
 import { CouponBox } from "@/components/cart/CouponBox";
 import { Totals } from "@/components/cart/Totals";
@@ -53,48 +52,21 @@ const Err = ({ errors, k }: { errors: Record<string, string>; k: string }) =>
 function Card({
   n,
   title,
-  step,
-  setStep,
-  addr,
   children,
 }: {
   n: number;
   title: string;
-  step: number;
-  setStep: (n: number) => void;
-  addr: Address;
   children: React.ReactNode;
 }) {
   return (
-    <section
-      className={`rounded-2xl border border-line bg-white p-5 shadow-[0_8px_30px_-24px_rgba(45,28,25,0.3)] sm:p-6 ${step === n ? "" : "bg-white/80"}`}
-    >
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-3 font-heading text-xl">
-          <span
-            className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${step > n ? "bg-success text-white" : step === n ? "bg-[#43262b] text-cream" : "bg-sand text-ink-soft"}`}
-          >
-            {step > n ? <Check className="h-4 w-4" /> : n + 1}
-          </span>
-          {title}
-        </h2>
-        {step > n && (
-          <button
-            onClick={() => setStep(n)}
-            className="text-sm underline underline-offset-4"
-          >
-            Edit
-          </button>
-        )}
-      </div>
-      {step === n && <div className="mt-5">{children}</div>}
-      {step > n && n === 0 && (
-        <p className="mt-2 pl-10 text-sm text-ink-soft">
-          {addr.name}, {addr.line1}
-          {addr.line2 && `, ${addr.line2}`}, {addr.city}, {addr.state}{" "}
-          {addr.pincode}
-        </p>
-      )}
+    <section className="rounded-2xl border border-line bg-white p-5 shadow-[0_8px_30px_-24px_rgba(45,28,25,0.3)] sm:p-6">
+      <h2 className="flex items-center gap-3 font-heading text-xl">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#43262b] text-xs text-cream">
+          {n + 1}
+        </span>
+        {title}
+      </h2>
+      <div className="mt-5">{children}</div>
     </section>
   );
 }
@@ -141,7 +113,10 @@ export default function CheckoutForm({
     null,
   );
   const selectedAddress =
-    saved.find((address) => address.id === selectedAddressId) ?? defaultAddress;
+    selectedAddressId === "new"
+      ? undefined
+      : (saved.find((address) => address.id === selectedAddressId) ??
+        defaultAddress);
   const phone =
     typedPhone ??
     (selectedAddress?.phone || user?.phone || "").replace(/^\+91/, "");
@@ -210,7 +185,19 @@ export default function CheckoutForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [placing, setPlacing] = useState(false);
   const [checking, setChecking] = useState(false);
-  const paymentDialog = useRef<HTMLDialogElement>(null);
+  const deliveryTab = useRef<HTMLButtonElement>(null);
+  const paymentTab = useRef<HTMLButtonElement>(null);
+  const deliveryPanel = useRef<HTMLDivElement>(null);
+  const paymentPanel = useRef<HTMLDivElement>(null);
+  const previousStep = useRef(0);
+
+  useEffect(() => {
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    const panel = step === 0 ? deliveryPanel.current : paymentPanel.current;
+    panel?.focus({ preventScroll: true });
+    panel?.scrollIntoView({ block: "start" });
+  }, [step]);
   const [placed, setPlaced] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
   const confirmationId = completedOrderId ?? confirmationOrderId;
@@ -258,10 +245,11 @@ export default function CheckoutForm({
       }
       if (!(await validate())) {
         setStep(0);
+        deliveryPanel.current?.focus({ preventScroll: true });
+        deliveryPanel.current?.scrollIntoView({ block: "start" });
         return;
       }
       setStep(1);
-      paymentDialog.current?.showModal();
     } finally {
       setChecking(false);
     }
@@ -276,7 +264,6 @@ export default function CheckoutForm({
     setPlaceError(null);
     setPlacing(true);
     if (!(await validate())) {
-      paymentDialog.current?.close();
       setStep(0);
       setPlacing(false);
       return;
@@ -326,7 +313,6 @@ export default function CheckoutForm({
     if (payment.mode === "gateway" && payment.url) goTo(payment.url);
     else if (payment.mode === "mock") router.push(`/pay/${order.id}`);
     else {
-      paymentDialog.current?.close();
       setCompletedOrderId(order.id);
       router.replace(`/checkout?order=${encodeURIComponent(order.id)}`, {
         scroll: false,
@@ -364,7 +350,7 @@ export default function CheckoutForm({
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Back to bag
         </Link>
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div className="mb-6 flex flex-col items-center gap-4 text-center">
           <div>
             <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.2em] text-[#885663]">
               The final details
@@ -374,13 +360,41 @@ export default function CheckoutForm({
               Your next favourites are almost yours.
             </p>
           </div>
-          <ol
+          <div
+            role="tablist"
             aria-label="Checkout progress"
             className="flex items-center gap-3 text-xs"
+            onKeyDown={(event) => {
+              if (
+                ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+              ) {
+                event.preventDefault();
+                const next =
+                  event.key === "Home"
+                    ? deliveryTab.current
+                    : event.key === "End"
+                      ? paymentTab.current
+                      : document.activeElement === deliveryTab.current
+                        ? paymentTab.current
+                        : deliveryTab.current;
+                next?.focus();
+              }
+            }}
           >
-            <li
-              aria-current={step === 0 ? "step" : undefined}
-              className="flex items-center gap-1.5 font-medium text-[#43262b]"
+            <button
+              ref={deliveryTab}
+              id="delivery-tab"
+              type="button"
+              role="tab"
+              aria-selected={step === 0}
+              aria-controls="delivery-panel"
+              tabIndex={step === 0 ? 0 : -1}
+              disabled={placing || !!confirmationId}
+              onClick={() => {
+                setPlaceError(null);
+                setStep(0);
+              }}
+              className="flex cursor-pointer items-center gap-1.5 py-2 font-medium text-[#43262b] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#43262b] text-white">
                 {step > 0 ? (
@@ -388,277 +402,411 @@ export default function CheckoutForm({
                 ) : (
                   <MapPin className="h-3 w-3" />
                 )}
-              </span>{" "}
+              </span>
               Delivery
-            </li>
-            <li aria-hidden="true" className="h-px w-8 bg-[#c9b3ab]" />
-            <li
-              aria-current={step > 0 ? "step" : undefined}
-              className={`flex items-center gap-1.5 ${step > 0 ? "font-medium text-[#43262b]" : "text-ink-soft"}`}
+            </button>
+            <span aria-hidden="true" className="h-px w-8 bg-[#c9b3ab]" />
+            <button
+              ref={paymentTab}
+              id="payment-tab"
+              type="button"
+              role="tab"
+              aria-selected={step === 1}
+              aria-controls="payment-panel"
+              tabIndex={step === 1 ? 0 : -1}
+              disabled={checking || placing || !canCheckout || !!confirmationId}
+              onClick={choosePayment}
+              className={`flex cursor-pointer items-center gap-1.5 py-2 disabled:cursor-not-allowed disabled:opacity-60 ${step === 1 ? "font-medium text-[#43262b]" : "text-ink-soft"}`}
             >
               <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full ${step > 0 ? "bg-[#43262b] text-white" : "border border-line bg-white"}`}
+                className={`flex h-6 w-6 items-center justify-center rounded-full ${step === 1 ? "bg-[#43262b] text-white" : "border border-line bg-white"}`}
               >
                 <CreditCard className="h-3 w-3" />
-              </span>{" "}
+              </span>
               Payment
-            </li>
-          </ol>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_390px] lg:gap-7">
           <div className="min-w-0 space-y-4">
-            <Card
-              step={step}
-              setStep={setStep}
-              addr={addr}
-              n={0}
-              title="Shipping address"
+            <div
+              ref={deliveryPanel}
+              id="delivery-panel"
+              role="tabpanel"
+              aria-labelledby="delivery-tab"
+              tabIndex={-1}
+              hidden={step !== 0}
+              className="scroll-mt-[calc(var(--store-header-height)+1rem)] outline-none"
             >
-              {saved.length > 0 && (
-                <div className="mb-5 rounded-xl bg-[#f7f3ed] p-3">
-                  <p className="mb-2 text-sm font-medium">Saved addresses</p>
-                  <ul className="grid gap-2 sm:grid-cols-2">
-                    {saved.map((address) => {
-                      const selected = selectedAddress?.id === address.id;
-                      return (
-                        <li key={address.id}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedAddressId(address.id);
-                              setTyped({});
-                              setTypedPhone(null);
-                              setErrors({});
-                              setPlaceError(null);
-                            }}
-                            aria-pressed={selected}
-                            className={`flex h-full w-full items-start gap-2 rounded-lg border p-3 text-left text-xs transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#75414b] ${selected ? "border-[#75414b] bg-white text-[#43262b] shadow-sm" : "border-line bg-white/60 hover:border-[#75414b]"}`}
-                          >
-                            <span
-                              aria-hidden="true"
-                              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[#75414b] bg-[#43262b] text-white" : "border-line"}`}
-                            >
-                              {selected && <Check className="h-3 w-3" />}
-                            </span>
-                            <span className="min-w-0">
-                              <span className="block font-medium">
-                                {address.label || "Saved"} ·{" "}
-                                {address.line1.slice(0, 22)}
-                                {address.line1.length > 22 ? "…" : ""}
-                              </span>
-                              <span className="mt-1 block break-words text-ink-soft">
-                                {address.name || user?.name}
-                              </span>
-                              <span className="mt-1 block break-words text-ink-soft">
-                                {[
-                                  address.line1,
-                                  address.line2,
-                                  address.city,
-                                  address.state,
-                                  address.pincode,
-                                ]
-                                  .filter(Boolean)
-                                  .join(", ")}
-                              </span>
-                              {address.phone && (
-                                <span className="mt-1 block text-ink-soft">
-                                  {address.phone}
-                                </span>
-                              )}
-                              {selected && (
-                                <span className="mt-1.5 block font-medium">
-                                  Selected for delivery
-                                </span>
-                              )}
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor="phone"
-                    className="mb-1.5 block text-sm font-medium"
+              <Card n={0} title="Shipping address">
+                {saved.length > 0 && (
+                  <section
+                    aria-label="Saved delivery addresses"
+                    className="mb-5 rounded-xl bg-[#f7f3ed] p-3"
                   >
-                    Mobile number
-                  </label>
-                  <div className="flex gap-2">
-                    <span className="flex h-11 items-center rounded-lg border border-line bg-[#f7f3ed] px-3 text-sm">
-                      +91
-                    </span>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium">Saved addresses</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedAddressId("new");
+                          setTyped({ pincode: "" });
+                          setTypedPhone(null);
+                          setPinPlace(undefined);
+                          latestPin.current = "";
+                          setErrors({});
+                          setPlaceError(null);
+                        }}
+                        aria-pressed={selectedAddressId === "new"}
+                        className="cursor-pointer text-xs font-medium underline underline-offset-4"
+                      >
+                        Add new address
+                      </button>
+                    </div>
+                    <ul className="grid gap-2 sm:grid-cols-2">
+                      {saved.map((address) => {
+                        const selected =
+                          selectedAddress?.id === address.id &&
+                          Object.keys(typed).length === 0 &&
+                          typedPhone === null;
+                        return (
+                          <li key={address.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAddressId(address.id);
+                                setTyped({});
+                                setTypedPhone(null);
+                                setPinPlace(undefined);
+                                latestPin.current = "";
+                                setErrors({});
+                                setPlaceError(null);
+                              }}
+                              aria-pressed={selected}
+                              className={`flex h-full w-full items-start gap-2 rounded-lg border p-3 text-left text-xs transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#75414b] ${selected ? "border-[#75414b] bg-white text-[#43262b] shadow-sm" : "border-line bg-white/60 hover:border-[#75414b]"}`}
+                            >
+                              <span
+                                aria-hidden="true"
+                                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[#75414b] bg-[#43262b] text-white" : "border-line"}`}
+                              >
+                                {selected && <Check className="h-3 w-3" />}
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block font-medium">
+                                  {address.label || "Saved"} ·{" "}
+                                  {address.line1.slice(0, 22)}
+                                  {address.line1.length > 22 ? "…" : ""}
+                                </span>
+                                <span className="mt-1 block break-words text-ink-soft">
+                                  {address.name || user?.name}
+                                </span>
+                                <span className="mt-1 block break-words text-ink-soft">
+                                  {[
+                                    address.line1,
+                                    address.line2,
+                                    address.city,
+                                    address.state,
+                                    address.pincode,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(", ")}
+                                </span>
+                                {address.phone && (
+                                  <span className="mt-1 block text-ink-soft">
+                                    {address.phone}
+                                  </span>
+                                )}
+                                {selected && (
+                                  <span className="mt-1.5 block font-medium">
+                                    Selected for delivery
+                                  </span>
+                                )}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                )}
+                {saved.length > 0 && (
+                  <div
+                    role="separator"
+                    aria-label="OR"
+                    className="mb-5 flex items-center gap-3 text-xs font-medium text-ink-soft"
+                  >
+                    <span className="flex-1 border-t border-line" />
+                    <span>OR</span>
+                    <span className="flex-1 border-t border-line" />
+                  </div>
+                )}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="phone"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Mobile number
+                    </label>
+                    <div className="flex gap-2">
+                      <span className="flex h-11 items-center rounded-lg border border-line bg-[#f7f3ed] px-3 text-sm">
+                        +91
+                      </span>
+                      <input
+                        id="phone"
+                        inputMode="numeric"
+                        maxLength={10}
+                        autoComplete="tel-national"
+                        value={phone}
+                        onChange={(e) =>
+                          setContactPhone(e.target.value.replace(/\D/g, ""))
+                        }
+                        className={field}
+                        placeholder="98765 43210"
+                      />
+                    </div>
+                    <Err errors={errors} k="phone" />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="name"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Full name
+                    </label>
                     <input
-                      id="phone"
+                      id="name"
+                      autoComplete="name"
+                      value={addr.name}
+                      onChange={(e) => setAddr({ name: e.target.value })}
+                      className={field}
+                    />
+                    <Err errors={errors} k="name" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label
+                      htmlFor="l1"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Address
+                    </label>
+                    <input
+                      id="l1"
+                      autoComplete="address-line1"
+                      value={addr.line1}
+                      onChange={(e) => setAddr({ line1: e.target.value })}
+                      className={field}
+                      placeholder="House no., building, street"
+                    />
+                    <Err errors={errors} k="line1" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label
+                      htmlFor="l2"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Landmark{" "}
+                      <span className="font-normal text-ink-soft">
+                        (optional)
+                      </span>
+                    </label>
+                    <input
+                      id="l2"
+                      value={addr.line2}
+                      onChange={(e) => setAddr({ line2: e.target.value })}
+                      className={field}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="pin"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Pincode
+                    </label>
+                    <input
+                      id="pin"
                       inputMode="numeric"
-                      maxLength={10}
-                      autoComplete="tel-national"
-                      value={phone}
+                      maxLength={6}
+                      autoComplete="postal-code"
+                      value={addr.pincode}
                       onChange={(e) =>
-                        setContactPhone(e.target.value.replace(/\D/g, ""))
+                        onPincode(e.target.value.replace(/\D/g, ""))
                       }
                       className={field}
-                      placeholder="98765 43210"
                     />
+                    <Err errors={errors} k="pincode" />
                   </div>
-                  <Err errors={errors} k="phone" />
-                </div>
-                <div>
-                  <label
-                    htmlFor="name"
-                    className="mb-1.5 block text-sm font-medium"
-                  >
-                    Full name
-                  </label>
-                  <input
-                    id="name"
-                    autoComplete="name"
-                    value={addr.name}
-                    onChange={(e) => setAddr({ name: e.target.value })}
-                    className={field}
-                  />
-                  <Err errors={errors} k="name" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label
-                    htmlFor="l1"
-                    className="mb-1.5 block text-sm font-medium"
-                  >
-                    Address
-                  </label>
-                  <input
-                    id="l1"
-                    autoComplete="address-line1"
-                    value={addr.line1}
-                    onChange={(e) => setAddr({ line1: e.target.value })}
-                    className={field}
-                    placeholder="House no., building, street"
-                  />
-                  <Err errors={errors} k="line1" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label
-                    htmlFor="l2"
-                    className="mb-1.5 block text-sm font-medium"
-                  >
-                    Landmark{" "}
-                    <span className="font-normal text-ink-soft">
-                      (optional)
-                    </span>
-                  </label>
-                  <input
-                    id="l2"
-                    value={addr.line2}
-                    onChange={(e) => setAddr({ line2: e.target.value })}
-                    className={field}
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="pin"
-                    className="mb-1.5 block text-sm font-medium"
-                  >
-                    Pincode
-                  </label>
-                  <input
-                    id="pin"
-                    inputMode="numeric"
-                    maxLength={6}
-                    autoComplete="postal-code"
-                    value={addr.pincode}
-                    onChange={(e) =>
-                      onPincode(e.target.value.replace(/\D/g, ""))
-                    }
-                    className={field}
-                  />
-                  <Err errors={errors} k="pincode" />
-                </div>
-                <div>
-                  <label
-                    htmlFor="city"
-                    className="mb-1.5 block text-sm font-medium"
-                  >
-                    City
-                  </label>
-                  <input
-                    id="city"
-                    autoComplete="address-level2"
-                    value={addr.city}
-                    onChange={(e) => setAddr({ city: e.target.value })}
-                    className={field}
-                  />
-                  <Err errors={errors} k="city" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label
-                    htmlFor="state"
-                    className="mb-1.5 block text-sm font-medium"
-                  >
-                    State
-                  </label>
-                  {here && here.states.length > 1 ? (
-                    <select
-                      id="state"
-                      autoComplete="address-level1"
-                      value={addr.state}
-                      onChange={(e) => setAddr({ state: e.target.value })}
-                      className={field}
-                    >
-                      {here.states.map((s) => (
-                        <option key={s.code} value={s.name}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      id="state"
-                      autoComplete="address-level1"
-                      value={addr.state}
-                      readOnly
-                      placeholder="Filled in from your pincode"
-                      aria-describedby="state-note"
-                      className={`${field} cursor-default bg-transparent`}
-                    />
-                  )}
-                  <p id="state-note" className="mt-1 text-xs text-ink-soft">
-                    {here && here.states.length > 1
-                      ? "This pincode is on a state border: choose your state."
-                      : "Set by your pincode."}
-                  </p>
-                </div>
-                <div className="flex items-start gap-3 rounded-xl border border-[#e6d9c4] bg-[#fbf5e9] p-3 text-xs sm:col-span-2">
-                  <Truck
-                    aria-hidden="true"
-                    className="mt-0.5 h-4 w-4 shrink-0 text-[#916b36]"
-                  />
                   <div>
-                    <p className="font-medium">
-                      {quote?.delivery?.zone
-                        ? `Delivery: ${quote.delivery.zone}`
-                        : "Standard delivery"}
-                    </p>
-                    <p className="mt-1 text-ink-soft">
-                      {daysText(zoneDays)
-                        ? `Estimated arrival in ${daysText(zoneDays)}. `
-                        : ""}
-                      The delivery charge is shown in your order summary.
+                    <label
+                      htmlFor="city"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      City
+                    </label>
+                    <input
+                      id="city"
+                      autoComplete="address-level2"
+                      value={addr.city}
+                      onChange={(e) => setAddr({ city: e.target.value })}
+                      className={field}
+                    />
+                    <Err errors={errors} k="city" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label
+                      htmlFor="state"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      State
+                    </label>
+                    {here && here.states.length > 1 ? (
+                      <select
+                        id="state"
+                        autoComplete="address-level1"
+                        value={addr.state}
+                        onChange={(e) => setAddr({ state: e.target.value })}
+                        className={field}
+                      >
+                        {here.states.map((s) => (
+                          <option key={s.code} value={s.name}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        id="state"
+                        autoComplete="address-level1"
+                        value={addr.state}
+                        readOnly
+                        placeholder="Filled in from your pincode"
+                        aria-describedby="state-note"
+                        className={`${field} cursor-default bg-transparent`}
+                      />
+                    )}
+                    <p id="state-note" className="mt-1 text-xs text-ink-soft">
+                      {here && here.states.length > 1
+                        ? "This pincode is on a state border: choose your state."
+                        : "Set by your pincode."}
                     </p>
                   </div>
+                  <div className="flex items-start gap-3 rounded-xl border border-[#e6d9c4] bg-[#fbf5e9] p-3 text-xs sm:col-span-2">
+                    <Truck
+                      aria-hidden="true"
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[#916b36]"
+                    />
+                    <div>
+                      <p className="font-medium">
+                        {quote?.delivery?.zone
+                          ? `Delivery: ${quote.delivery.zone}`
+                          : "Standard delivery"}
+                      </p>
+                      <p className="mt-1 text-ink-soft">
+                        {daysText(zoneDays)
+                          ? `Estimated arrival in ${daysText(zoneDays)}. `
+                          : ""}
+                        The delivery charge is shown in your order summary.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </Card>
+                <p className="mt-3 text-xs text-ink-soft">
+                  New delivery addresses are saved to your account when you
+                  place an order.
+                </p>
+              </Card>
+            </div>
+            <div
+              ref={paymentPanel}
+              id="payment-panel"
+              role="tabpanel"
+              aria-labelledby="payment-tab"
+              tabIndex={-1}
+              hidden={step !== 1}
+              className="scroll-mt-[calc(var(--store-header-height)+1rem)] outline-none"
+            >
+              <Card n={1} title="Choose payment method">
+                <div className="mb-5 rounded-xl bg-[#f7f3ed] p-3 text-sm">
+                  <p className="font-medium">Delivering to {addr.name}</p>
+                  <p className="mt-1 break-words text-xs text-ink-soft">
+                    {[
+                      addr.line1,
+                      addr.line2,
+                      addr.city,
+                      addr.state,
+                      addr.pincode,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                  <button
+                    type="button"
+                    disabled={placing}
+                    onClick={() => {
+                      setPlaceError(null);
+                      setStep(0);
+                    }}
+                    className="mt-2 inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium underline underline-offset-4 disabled:opacity-60"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" /> Back to delivery
+                  </button>
+                </div>
+                <div
+                  className="space-y-3"
+                  role="radiogroup"
+                  aria-label="Payment method"
+                >
+                  {(
+                    [
+                      [
+                        "online",
+                        "Pay online",
+                        "UPI, cards, netbanking, wallets via Razorpay",
+                      ],
+                      [
+                        "cod",
+                        "Cash on delivery",
+                        codOff ?? "Pay when your order arrives",
+                      ],
+                    ] as const
+                  ).map(([v, t, d]) => (
+                    <label
+                      key={v}
+                      className={`flex items-start gap-4 rounded-xl border p-4 ${v === "cod" && codOff ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${(codOff ? "online" : pay) === v ? "border-[#75414b] bg-[#fbf4f1]" : "border-line"}`}
+                    >
+                      <input
+                        type="radio"
+                        name="pay"
+                        disabled={placing || (v === "cod" && !!codOff)}
+                        checked={(codOff ? "online" : pay) === v}
+                        onChange={() => setPay(v)}
+                        className="mt-1 h-4 w-4 accent-[#43262b]"
+                      />
+                      <span>
+                        <span className="block font-medium">{t}</span>
+                        <span className="text-sm text-ink-soft">{d}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </Card>
+            </div>
           </div>
 
           <aside
-            className="h-fit min-w-0 space-y-4 lg:sticky lg:top-6"
+            className="h-fit min-w-0 space-y-4 lg:sticky lg:top-[calc(var(--store-header-height)+1rem)]"
             aria-label="Order summary and payment"
           >
             <section className="overflow-hidden rounded-2xl border border-line bg-white p-5 shadow-[0_8px_30px_-24px_rgba(45,28,25,0.3)] sm:p-6">
-              <Summary />
+              <fieldset
+                disabled={placing || !!confirmationId}
+                className="min-w-0"
+              >
+                <legend className="sr-only">Order summary details</legend>
+                <Summary />
+              </fieldset>
               <div className="mt-4 border-t border-line pt-4">
                 {placeError && (
                   <p
@@ -683,7 +831,7 @@ export default function CheckoutForm({
                   </p>
                 )}
                 <button
-                  onClick={choosePayment}
+                  onClick={step === 0 ? choosePayment : place}
                   disabled={
                     !!confirmationId || checking || placing || !canCheckout
                   }
@@ -696,7 +844,9 @@ export default function CheckoutForm({
                       ? "Placing order…"
                       : quoting
                         ? "Updating total…"
-                        : `Pay · ${formatINR(total)}`}
+                        : step === 0
+                          ? "Continue to payment"
+                          : `${pay === "cod" && !codOff ? "Place order" : "Pay online"} · ${formatINR(total)}`}
                 </button>
                 <p className="mt-3 text-center text-xs text-ink-soft">
                   By placing your order you agree to our{" "}
@@ -718,92 +868,6 @@ export default function CheckoutForm({
       {confirmationId && (
         <OrderConfirmationModal key={confirmationId} orderId={confirmationId} />
       )}
-
-      <dialog
-        ref={paymentDialog}
-        aria-labelledby="payment-title"
-        onCancel={(event) => {
-          if (placing) event.preventDefault();
-        }}
-        className="m-auto w-[calc(100%_-_2rem)] max-w-md rounded-2xl border border-line bg-white p-6 text-ink backdrop:bg-ink/40"
-      >
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 id="payment-title" className="font-heading text-2xl">
-            Choose payment method
-          </h2>
-          <button
-            type="button"
-            onClick={() => paymentDialog.current?.close()}
-            disabled={placing}
-            aria-label="Close payment options"
-            className="rounded-full p-2 hover:bg-sand disabled:opacity-50"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <div
-          className="space-y-3"
-          role="radiogroup"
-          aria-label="Payment method"
-        >
-          {(
-            [
-              [
-                "online",
-                "Pay online",
-                "UPI, cards, netbanking, wallets via Razorpay",
-              ],
-              [
-                "cod",
-                "Cash on delivery",
-                codOff ?? "Pay when your order arrives",
-              ],
-            ] as const
-          ).map(([v, t, d]) => (
-            <label
-              key={v}
-              className={`flex items-start gap-4 rounded-xl border p-4 ${v === "cod" && codOff ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${pay === v && !(v === "cod" && codOff) ? "border-[#75414b] bg-[#fbf4f1]" : "border-line"}`}
-            >
-              <input
-                type="radio"
-                name="pay"
-                disabled={placing || (v === "cod" && !!codOff)}
-                checked={pay === v && !(v === "cod" && codOff)}
-                onChange={() => setPay(v)}
-                className="mt-1 h-4 w-4 accent-[#43262b]"
-              />
-              <span>
-                <span className="block font-medium">{t}</span>
-                <span className="text-sm text-ink-soft">{d}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-
-        {placeError && (
-          <p role="alert" className="mt-4 text-sm text-danger">
-            {placeError}
-          </p>
-        )}
-        {issues.length > 0 && (
-          <p role="alert" className="mt-4 text-sm text-danger">
-            {issues[0].message}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={place}
-          disabled={placing || !canCheckout}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#43262b] text-sm font-medium text-cream transition hover:bg-[#61353e] disabled:opacity-60"
-        >
-          <Lock className="h-4 w-4" />{" "}
-          {placing
-            ? "Placing order…"
-            : quoting
-              ? "Updating total…"
-              : `${pay === "cod" ? "Place order" : "Pay online"} · ${formatINR(total)}`}
-        </button>
-      </dialog>
     </div>
   );
 }
@@ -849,115 +913,95 @@ function Summary() {
 
 function LoyaltyRedemption() {
   const { quote, loyaltyPoints, setLoyaltyPoints, quoting } = useCart();
-  const [input, setInput] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const loyalty = quote?.loyalty;
-  if (!loyalty) return null;
-  const apply = () => {
-    const points = Number(input);
+  // Coupons or bag changes can change how many points this order accepts.
+  // Keep an enabled redemption at the server's maximum rather than a partial amount.
+  useEffect(() => {
     if (
-      !/^\d+$/.test(input) ||
-      !Number.isSafeInteger(points) ||
-      points <= 0 ||
-      points % loyalty.conversion_points ||
-      points > loyalty.max_points
+      !quoting &&
+      loyalty &&
+      loyaltyPoints > 0 &&
+      loyaltyPoints !== loyalty.max_points
     ) {
-      setError(
-        `Enter a multiple of ${loyalty.conversion_points}, up to ${loyalty.max_points} points.`,
-      );
-      return;
+      setLoyaltyPoints(loyalty.max_points);
     }
-    setError(null);
-    setLoyaltyPoints(points);
-  };
+  }, [loyalty, loyaltyPoints, quoting, setLoyaltyPoints]);
+  if (!loyalty) return null;
+  if (loyalty.eligible === false)
+    return (
+      <section
+        aria-label="Loyalty membership"
+        className="rounded-xl border border-line px-4 py-3"
+      >
+        <h3 className="text-sm font-medium">Become a member</h3>
+        <p className="mt-1 text-xs text-ink-soft">
+          Complete your profile membership details to earn and redeem loyalty
+          points.
+        </p>
+        <Link
+          href="/account/profile"
+          className="mt-2 inline-block text-sm font-medium underline underline-offset-4"
+        >
+          Join from Profile
+        </Link>
+      </section>
+    );
+  const enabled = loyaltyPoints > 0;
+  const note = quoting
+    ? "Updating deduction…"
+    : enabled
+      ? `Using all ${loyaltyPoints.toLocaleString("en-IN")} eligible points`
+      : loyalty.max_points > 0
+        ? `Use all ${loyalty.max_points.toLocaleString("en-IN")} eligible points on this order.`
+        : "No points available to redeem on this order.";
   return (
     <section
-      className="space-y-3 rounded-xl border border-line p-4"
+      className="rounded-xl border border-line px-4 py-2.5"
       aria-label="Redeem loyalty points"
+      title={note}
     >
-      <h3 className="text-sm font-medium">Redeem loyalty points</h3>
-      <p className="text-sm text-ink-soft">
-        Available:{" "}
-        <strong className="text-ink">
-          {loyalty.balance_points.toLocaleString("en-IN")} points
-        </strong>
-      </p>
-      <p className="text-xs text-ink-soft">
-        {loyalty.conversion_points.toLocaleString("en-IN")} points ={" "}
-        {formatINR(loyalty.conversion_value_minor / 100)} off
-      </p>
-      {loyaltyPoints > 0 ? (
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <span aria-live="polite">
-            {quoting
-              ? "Updating deduction…"
-              : `Using ${loyaltyPoints.toLocaleString("en-IN")} points`}
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              setLoyaltyPoints(0);
-              setError(null);
-            }}
-            className="underline underline-offset-4"
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3
+            id="loyalty-toggle-label"
+            className="truncate text-sm font-medium leading-tight min-[360px]:text-base"
           >
-            Remove
-          </button>
+            Redeem loyalty points
+          </h3>
+          <p
+            className="text-[11px] leading-tight text-ink-soft"
+            aria-live="polite"
+          >
+            Redeemable points ={" "}
+            <span className="font-medium tabular-nums text-ink">
+              {loyalty.max_points.toLocaleString("en-IN")}
+            </span>
+          </p>
         </div>
-      ) : (
-        <>
-          <label htmlFor="redeem-points" className="sr-only">
-            Points to redeem
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="redeem-points"
-              type="number"
-              inputMode="numeric"
-              min={loyalty.conversion_points}
-              max={loyalty.max_points}
-              step={loyalty.conversion_points}
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                setError(null);
-              }}
-              placeholder="Points to redeem"
-              disabled={quoting || loyalty.max_points === 0}
-              className="h-11 min-w-0 flex-1 rounded-full border border-line bg-white px-4 text-sm disabled:opacity-50"
-            />
-            <button
-              type="button"
-              onClick={apply}
-              disabled={quoting || loyalty.max_points === 0}
-              className="rounded-full bg-taupe px-5 text-sm font-medium disabled:opacity-50"
-            >
-              Apply
-            </button>
-          </div>
-          {loyalty.max_points > 0 ? (
-            <button
-              type="button"
-              disabled={quoting}
-              onClick={() => {
-                setInput(String(loyalty.max_points));
-                setLoyaltyPoints(loyalty.max_points);
-                setError(null);
-              }}
-              className="text-xs underline underline-offset-4"
-            >
-              Use maximum ({loyalty.max_points.toLocaleString("en-IN")} points)
-            </button>
-          ) : (
-            <p className="text-xs text-ink-soft">
-              No points available to redeem on this order.
-            </p>
-          )}
-        </>
-      )}
-      {(error || loyalty.reason) && (
-        <p role="alert" className="text-xs text-danger">
-          {error || loyalty.reason}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          aria-labelledby="loyalty-toggle-label"
+          aria-describedby="loyalty-toggle-note"
+          disabled={quoting || (!enabled && loyalty.max_points === 0)}
+          onClick={() => setLoyaltyPoints(enabled ? 0 : loyalty.max_points)}
+          className={`touch-target inline-flex h-7 w-12 shrink-0 items-center rounded-full border p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${enabled ? "border-[#43262b] bg-[#43262b]" : "border-line bg-sand"}`}
+        >
+          <span
+            aria-hidden="true"
+            className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${enabled ? "translate-x-[18px]" : "translate-x-0"}`}
+          />
+        </button>
+      </div>
+      <p id="loyalty-toggle-note" aria-live="polite" className="sr-only">
+        Available: {loyalty.balance_points.toLocaleString("en-IN")} points.{" "}
+        {loyalty.conversion_points.toLocaleString("en-IN")} points ={" "}
+        {formatINR(loyalty.conversion_value_minor / 100)} off. {note}
+      </p>
+      {loyalty.reason && (
+        <p role="alert" className="mt-3 text-xs text-danger">
+          {loyalty.reason}
         </p>
       )}
     </section>

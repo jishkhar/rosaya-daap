@@ -1,63 +1,136 @@
 import { expect, test } from "@playwright/test";
 
-test("profile membership card shows upgrade progress and refreshes the CRM segment", async ({
+test("Profile asks customers to become a member and preserves enrollment", async ({
   page,
 }) => {
-  let segment = "new";
-  const customer = () => ({
+  let customer = {
     id: "profile-customer",
     name: "Asha Rao",
-    email: "asha@example.com",
-    phone: null,
-    segment,
+    email: "asha@example.test",
+    phone: null as string | null,
+    birthday: null as string | null,
+    membership: { eligible: false, joined_at: null as string | null },
+    segment: "not_member",
     loyalty: {
-      points: segment === "vip" ? 100 : 25,
-      vip_min_points: 100,
+      points: 25,
+      next_tier: "gold",
+      next_tier_points: 50,
       points_per_100: 1,
-      points_to_vip: segment === "vip" ? 0 : 75,
-      spend_to_vip_minor: segment === "vip" ? 0 : 750000,
+      points_to_next_tier: 25,
+      spend_to_next_tier_minor: 250000,
     },
-  });
+  };
+  let joins = 0;
+  let fail = true;
+  let release: (() => void) | undefined;
   await page.route("**/api/me", (route) =>
-    route.fulfill({ json: { customer: customer() } }),
+    route.fulfill({ json: { customer } }),
   );
   await page.route("**/api/basket", (route) =>
     route.fulfill({ json: { items: [], coupon_code: null } }),
   );
+  await page.route("**/api/me/membership", async (route) => {
+    joins++;
+    const body = route.request().postDataJSON();
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    if (fail)
+      return route.fulfill({
+        status: 422,
+        json: {
+          error: { message: "That phone number belongs to another account." },
+        },
+      });
+    customer = {
+      ...customer,
+      name: body.name,
+      phone: `+91${body.phone}`,
+      birthday: body.birthday,
+      membership: { eligible: true, joined_at: "2026-10-27T12:00:00Z" },
+      segment: "silver",
+    };
+    return route.fulfill({ json: customer });
+  });
   await page.goto("/account/profile");
-  const details = page.getByRole("heading", {
-    name: "Personal details",
+  await expect(
+    page.getByRole("heading", { name: "Become a member", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("complementary", { name: "Your membership" }),
+  ).toHaveCount(0);
+  const enrollment = page.getByRole("region", {
+    name: "Become a member",
     exact: true,
   });
-  for (const [key, label] of [
-    ["new", "New"],
-    ["regular", "Regular"],
-    ["vip", "VIP"],
-    ["inactive", "Inactive"],
-  ]) {
-    segment = key;
-    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-    const badge = page.getByLabel(`Customer segment: ${label}`, {
-      exact: true,
-    });
-    await expect(badge).toHaveText(label);
-    const headingBox = await details.boundingBox();
-    const card = page.getByRole("complementary", { name: "Your membership" });
-    const cardBox = await card.boundingBox();
-    expect(cardBox!.y + cardBox!.height).toBeLessThan(headingBox!.y);
-    expect(cardBox!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-    await expect(card).toContainText("Rosaya Rewards Club");
-    if (key === "vip") {
-      await expect(card).toContainText("our highest tier");
-      await expect(card.getByRole("progressbar")).toHaveCount(0);
-    } else {
-      await expect(card).toContainText("75 more points");
-      await expect(card).toContainText("₹7,500");
-      await expect(card.getByRole("progressbar")).toHaveAttribute(
-        "value",
-        "25",
-      );
-    }
-  }
-  await expect(page.getByLabel("Full name")).toHaveValue("Asha Rao");
+  const personal = page
+    .getByRole("heading", { name: "Personal details", exact: true })
+    .locator("..");
+  const cardBox = await enrollment.boundingBox();
+  const detailsBox = await personal.boundingBox();
+  expect(cardBox!.y + cardBox!.height).toBeLessThan(detailsBox!.y);
+  await expect(
+    enrollment.getByLabel("Date of birth", { exact: true }),
+  ).toHaveCount(0);
+  await enrollment
+    .getByRole("button", { name: "Become a member", exact: true })
+    .click();
+
+  await expect(enrollment.getByLabel("Email", { exact: true })).toHaveValue(
+    "asha@example.test",
+  );
+  await expect(enrollment.getByLabel("Email", { exact: true })).toHaveAttribute(
+    "readonly",
+    "",
+  );
+  await expect(page.getByText(/Your existing 25 points/)).toBeVisible();
+  await page
+    .getByRole("button", { name: "Become a member", exact: true })
+    .click();
+  expect(joins).toBe(0);
+  await enrollment
+    .getByLabel("Date of birth", { exact: true })
+    .fill("1990-03-14");
+  await enrollment
+    .getByLabel("Mobile number", { exact: true })
+    .fill("9876543210");
+  await page
+    .getByRole("button", { name: "Become a member", exact: true })
+    .click();
+  await expect.poll(() => joins).toBe(1);
+  await expect(
+    page.getByRole("button", { name: "Joining…", exact: true }),
+  ).toBeDisabled();
+  release?.();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "That phone number" }),
+  ).toBeVisible();
+  fail = false;
+  await page
+    .getByRole("button", { name: "Become a member", exact: true })
+    .click();
+  await expect.poll(() => joins).toBe(2);
+  release?.();
+  await expect(
+    page.getByRole("heading", { name: "Personal details", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("now a member");
+  const card = page.getByRole("complementary", { name: "Your membership" });
+  await expect(
+    card.getByLabel("Customer membership: Silver", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    card.getByLabel("Loyalty balance", { exact: true }),
+  ).toContainText("25");
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Become a member", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel("Date of birth", { exact: true })).toHaveValue(
+    "1990-03-14",
+  );
+  await expect(page.getByLabel("Mobile number", { exact: true })).toHaveValue(
+    "9876543210",
+  );
+  expect(joins).toBe(2);
 });

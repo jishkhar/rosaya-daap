@@ -52,7 +52,7 @@ export function DeliverTo() {
     : "Enter pincode";
 
   return (
-    <div ref={box} className="relative">
+    <div ref={box} className="static sm:relative">
       <button
         type="button"
         className="touch-target flex items-center gap-1.5 rounded-full p-2 text-sm hover:bg-sand"
@@ -72,7 +72,7 @@ export function DeliverTo() {
       {open && (
         <div
           id={id}
-          className="absolute right-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-line bg-cream p-4 shadow-lg"
+          className="absolute inset-x-4 top-full z-50 mt-2 rounded-2xl border border-line bg-cream p-4 shadow-lg sm:left-auto sm:right-0 sm:w-[min(20rem,calc(100vw-2rem))]"
         >
           {pin && answer && (
             <div className="mb-3 text-sm" role="status">

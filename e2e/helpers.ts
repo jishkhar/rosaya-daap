@@ -47,7 +47,7 @@ export async function fillAddress(
   await page
     .getByLabel("Address", { exact: true })
     .fill(v.line1 ?? "12 MG Road, Navrangpura");
-  await page.getByLabel("Pincode").fill(v.pincode ?? "380009");
+  await page.getByLabel("Pincode", { exact: true }).fill(v.pincode ?? "380009");
   await page.getByLabel("City").fill(v.city ?? "Ahmedabad");
   // the state is set by the pincode (the ERP's pincode directory), not typed
   await expect(page.getByLabel("State")).toHaveValue(v.state ?? "Gujarat");
