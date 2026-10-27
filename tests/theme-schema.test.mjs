@@ -197,6 +197,7 @@ const { withIdentity } = load("../src/themes/schema.ts");
 // Find either local checkout name; seed-dependent checks skip in standalone storefront CI.
 const rosayaFixture = [
   "../../backend/db/seed/rosaya_theme.json",
+  "../../shopconnect-backend/db/seed/rosaya_theme.json",
   "../../erp-ecommerce-backend/db/seed/rosaya_theme.json",
 ]
   .map((relative) => new URL(relative, import.meta.url))

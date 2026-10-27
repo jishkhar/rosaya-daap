@@ -9,7 +9,7 @@ Customer-facing Online-channel storefront (Next.js 16, React 19, Tailwind 4). In
 docker compose -f ../docker-compose.dev-db.yml up -d
 export DATABASE_URL=postgresql://postgres:postgres@localhost:5434/rosaya_dev   # createdb rosaya_dev first
 uv run alembic upgrade head
-uv run python -m scripts.seed_rosaya --write-env ../storefront/.env.local        # tenant + login + 102 products + coupons + channel key
+uv run python -m scripts.seed_rosaya --write-env ../shopconnect-storefront/.env.local        # tenant + login + 102 products + coupons + channel key
 STORE_MOCK_PAYMENTS=1 uv run uvicorn main:app --port 8000                        # mock gateway: development only
 
 # 2. storefront
