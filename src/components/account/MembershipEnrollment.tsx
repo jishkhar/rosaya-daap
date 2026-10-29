@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MembershipCard } from "@/components/account/MembershipCard";
 import { useAuth, type User } from "@/lib/auth";
+import { mobileError, nationalDigits } from "@/lib/phone";
 
 const input =
   "h-12 min-w-0 w-full rounded-xl border border-line bg-white px-4 text-sm outline-none focus:border-ink";
@@ -25,7 +26,7 @@ export function MembershipEnrollment({ user }: { user: User }) {
       form.name.trim().length < 2 ||
       !form.birthday ||
       form.birthday > maxBirthday ||
-      !/^[6-9]\d{9}$/.test(form.phone)
+      Boolean(mobileError(form.phone))
     ) {
       setError(
         "Enter your full name, valid date of birth and 10-digit mobile number.",
@@ -93,7 +94,7 @@ export function MembershipEnrollment({ user }: { user: User }) {
               setForm({
                 name: user.name,
                 birthday: user.birthday ?? "",
-                phone: (user.phone ?? "").replace(/^\+91/, ""),
+                phone: nationalDigits(user.phone),
               });
               setError(null);
               setOpen(true);

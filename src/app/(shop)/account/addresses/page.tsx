@@ -12,6 +12,7 @@ import {
   UNKNOWN_PINCODE,
   type Place,
 } from "@/lib/pincode";
+import { mobileError, nationalDigits } from "@/lib/phone";
 
 const input =
   "h-12 w-full rounded-xl border border-line bg-white px-4 text-sm outline-none focus:border-ink";
@@ -119,7 +120,7 @@ export default function AddressesPage() {
         : {
             label: a.label ?? "Home",
             name: a.name ?? "",
-            phone: (a.phone ?? "").replace(/^\+91/, ""),
+            phone: nationalDigits(a.phone),
             line1: a.line1,
             line2: a.line2 ?? "",
             pincode: a.pincode ?? "",
@@ -135,8 +136,8 @@ export default function AddressesPage() {
     e.preventDefault();
     const err: Record<string, string> = {};
     if (form.name.trim().length < 2) err.name = "Enter the recipient's name.";
-    if (!/^[6-9]\d{9}$/.test(form.phone))
-      err.phone = "Enter a valid 10-digit mobile number.";
+    const phoneProblem = mobileError(form.phone);
+    if (phoneProblem) err.phone = phoneProblem;
     if (form.line1.trim().length < 5) err.line1 = "Enter the address.";
     if (!/^[1-9]\d{5}$/.test(form.pincode))
       err.pincode = "Enter a valid 6-digit pincode.";
@@ -170,7 +171,7 @@ export default function AddressesPage() {
       body: {
         label: a.label,
         name: a.name ?? "",
-        phone: (a.phone ?? "").replace(/^\+91/, ""),
+        phone: nationalDigits(a.phone),
         line1: a.line1,
         line2: a.line2,
         city: a.city ?? "",

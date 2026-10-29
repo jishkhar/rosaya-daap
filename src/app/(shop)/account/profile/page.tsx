@@ -5,6 +5,12 @@ import { Check, Eye, EyeOff } from "lucide-react";
 import { MembershipEnrollment } from "@/components/account/MembershipEnrollment";
 import { useAuth } from "@/lib/auth";
 import { call } from "@/lib/http";
+import {
+  MOBILE_MESSAGE,
+  mobileError,
+  nationalDigits,
+  toE164,
+} from "@/lib/phone";
 
 const input =
   "h-12 w-full rounded-xl border border-line bg-white px-4 text-sm outline-none focus:border-ink";
@@ -43,7 +49,7 @@ export default function ProfilePage() {
   const today = new Date();
   const maxBirthday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-  const phoneValue = phone ?? (user.phone ?? "").replace(/^\+91/, "");
+  const phoneValue = phone ?? nationalDigits(user.phone);
 
   const saveName = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,14 +59,14 @@ export default function ProfilePage() {
     if (value.trim().length < 2) return setSaveError("Enter your full name.");
     if ((isMember && !birthdayValue) || birthdayValue > maxBirthday)
       return setSaveError("Enter a valid date of birth.");
-    if ((isMember || phoneValue) && !/^[6-9]\d{9}$/.test(phoneValue))
-      return setSaveError("Enter a valid 10-digit mobile number.");
+    if ((isMember || phoneValue) && mobileError(phoneValue))
+      return setSaveError(MOBILE_MESSAGE);
     setSaving(true);
     try {
       const details = {
         name: value.trim(),
         ...(birthdayValue ? { birthday: birthdayValue } : {}),
-        ...(phoneValue ? { phone: phoneValue } : {}),
+        ...(phoneValue ? { phone: toE164(phoneValue) } : {}),
       };
       const r = await updateProfile(details);
       if (!r.ok) return setSaveError(r.error);

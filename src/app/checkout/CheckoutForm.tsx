@@ -32,6 +32,7 @@ import {
 import { formatINR } from "@/lib/money";
 import { daysText } from "@/lib/shipping";
 import { useShipping } from "@/lib/shippingContext";
+import { formatPhone, mobileError, nationalDigits, toE164 } from "@/lib/phone";
 
 type Address = {
   name: string;
@@ -118,8 +119,7 @@ export default function CheckoutForm({
       : (saved.find((address) => address.id === selectedAddressId) ??
         defaultAddress);
   const phone =
-    typedPhone ??
-    (selectedAddress?.phone || user?.phone || "").replace(/^\+91/, "");
+    typedPhone ?? nationalDigits(selectedAddress?.phone || user?.phone);
   const setContactPhone = (v: string) => setTypedPhone(v);
   const deliverTo = useDeliverTo();
   const [typed, setTyped] = useState<Partial<Address>>({});
@@ -213,8 +213,8 @@ export default function CheckoutForm({
 
   const validate = async () => {
     const e: Record<string, string> = {};
-    if (!/^[6-9]\d{9}$/.test(phone))
-      e.phone = "Enter a valid 10-digit mobile number.";
+    const phoneProblem = mobileError(phone);
+    if (phoneProblem) e.phone = phoneProblem;
     if (addr.name.trim().length < 2)
       e.name = "Enter the recipient's full name.";
     if (addr.line1.trim().length < 5) e.line1 = "Enter your address.";
@@ -276,7 +276,7 @@ export default function CheckoutForm({
       contact: { name: addr.name.trim(), email: user.email?.trim() || null },
       address: {
         name: addr.name.trim(),
-        phone,
+        phone: toE164(phone),
         line1: addr.line1.trim(),
         line2: addr.line2.trim() || null,
         city: addr.city.trim(),
@@ -514,7 +514,7 @@ export default function CheckoutForm({
                                 </span>
                                 {address.phone && (
                                   <span className="mt-1 block text-ink-soft">
-                                    {address.phone}
+                                    {formatPhone(address.phone)}
                                   </span>
                                 )}
                                 {selected && (
