@@ -12,11 +12,11 @@ test("browse, filter, add to bag, coupon, register and check out with cash on de
   await expect(page.locator("#main article").first()).toBeVisible();
 
   // category + URL-driven filters
-  await page.goto("/c/sarees");
+  await page.goto("/collections/sarees");
   await expect(
     page.locator("#main").getByText(/Showing \d+ of \d+/),
   ).toBeVisible();
-  await page.goto("/c/sarees?sort=price-asc&stock=1");
+  await page.goto("/collections/sarees?sort=price-asc&stock=1");
   await expect(page.locator("#main article").first()).toBeVisible();
   const prices = await page
     .locator("#main article")
@@ -29,7 +29,7 @@ test("browse, filter, add to bag, coupon, register and check out with cash on de
   expect([...prices].sort((a, b) => a - b)).toEqual(prices);
 
   // product page -> bag
-  const title = await addFirstProductToBag(page, "/c/sarees?stock=1");
+  const title = await addFirstProductToBag(page, "/collections/sarees?stock=1");
   await page.getByRole("link", { name: /view bag/i }).click();
   await expect(page.getByRole("heading", { name: "Your Bag" })).toBeVisible();
   await expect(page.getByRole("link", { name: title }).first()).toBeVisible();

@@ -58,7 +58,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
       for (const entry of Array.isArray(value) ? value : value ? [value] : [])
         query.append(key, entry);
     }
-    permanentRedirect(`/c/${c.slug}${query.size ? `?${query}` : ""}`);
+    permanentRedirect(`/collections/${c.slug}${query.size ? `?${query}` : ""}`);
   }
   const image = c.kind === "custom" ? c.image_url : null;
   return (
@@ -113,7 +113,11 @@ export default async function CollectionPage({ params, searchParams }: Props) {
           ) : null}
         </div>
       </header>
-      <Listing scope={c.scope} searchParams={filters} basePath={`/c/${slug}`} />
+      <Listing
+        scope={c.scope}
+        searchParams={filters}
+        basePath={`/collections/${slug}`}
+      />
     </div>
   );
 }

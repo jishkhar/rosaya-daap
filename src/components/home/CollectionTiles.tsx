@@ -12,7 +12,7 @@ export function CollectionTiles({
     <ul className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
       {collections.map((c) => (
         <li key={c.id}>
-          <Link href={`/c/${c.slug}`} className="group block">
+          <Link href={`/collections/${c.slug}`} className="group block">
             <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-sand">
               <Image
                 unoptimized

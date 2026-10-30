@@ -118,7 +118,7 @@ test("links and images only allow safe schemes", () => {
     assert.equal(resolveFields(fields, { href: bad }).href, "/fallback", bad);
   }
   for (const ok of [
-    "/c/sarees",
+    "/collections/sarees",
     "#",
     "https://instagram.com/x",
     "mailto:a@b.in",
@@ -261,12 +261,12 @@ test("Rosaya tiles follow current ERP covers, names and collection links", () =>
     {
       label: "Silks",
       image: "https://media.example/product.webp",
-      href: "/c/silks",
+      href: "/collections/silks",
     },
     {
       label: "Edited collection",
       image: "https://media.example/cover.webp",
-      href: "/c/collection-123",
+      href: "/collections/collection-123",
     },
   ]);
   assert.equal(
@@ -420,10 +420,10 @@ test("Rosaya navigation follows ERP header visibility, ordering and dropdown nam
     },
   ];
   assert.deepEqual(headerMenu(choices, 1), [
-    { label: "B", href: "/c/collection-b", children: [] },
+    { label: "B", href: "/collections/collection-b", children: [] },
   ]);
   assert.deepEqual(headerMenu([row], 8)[0].children, [
-    { label: "Updated child", href: "/c/collection-child" },
+    { label: "Updated child", href: "/collections/collection-child" },
   ]);
   row.name = "Renamed";
   assert.equal(headerMenu([row], 8)[0].label, "Renamed");

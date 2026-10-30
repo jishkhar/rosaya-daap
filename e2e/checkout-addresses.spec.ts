@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { unique } from "./helpers";
+import { unique, uniquePhone } from "./helpers";
 import type { Quote } from "../src/lib/cart";
 
 test("checkout shows profile addresses first and accepts a new destination without overwriting them", async ({
@@ -10,6 +10,8 @@ test("checkout shows profile addresses first and accepts a new destination witho
       name: "Asha Rao",
       email: `${unique("address")}@example.com`,
       password: "correct horse battery",
+      phone: uniquePhone(),
+      birthday: "1990-03-14",
     },
   });
   expect(registration.ok()).toBe(true);

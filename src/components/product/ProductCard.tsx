@@ -35,7 +35,7 @@ export function ProductCard({
 
   return (
     <article className="group relative">
-      <Link href={`/p/${p.slug}`} className="block">
+      <Link href={`/products/${p.slug}`} className="block">
         <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-sand">
           <Image
             src={p.images[0]}

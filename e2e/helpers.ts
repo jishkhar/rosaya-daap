@@ -3,11 +3,17 @@ import { expect, type Page } from "@playwright/test";
 export const unique = (p: string) =>
   `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
+/** A fresh 10-digit mobile number (sign-up requires one). */
+export const uniquePhone = () =>
+  `9${String(Date.now()).slice(-6)}${Math.floor(100 + Math.random() * 900)}`;
+
 export async function registerShopper(page: Page) {
   const email = `${unique("shopper")}@example.com`;
   const password = "correct horse battery";
   await page.getByLabel("Full name").fill("Asha Rao");
   await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Mobile number").fill(uniquePhone());
+  await page.getByLabel("Date of birth").fill("1990-03-14");
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Create account" }).click();
   return { email, password };
@@ -16,7 +22,7 @@ export async function registerShopper(page: Page) {
 /** Open a product that is in stock and put it in the bag; returns its title. */
 export async function addFirstProductToBag(
   page: Page,
-  path = "/c/sarees?stock=1",
+  path = "/collections/sarees?stock=1",
 ) {
   await page.goto(path);
   const card = page.locator("#main article").first();

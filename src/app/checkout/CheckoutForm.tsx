@@ -975,16 +975,16 @@ function LoyaltyRedemption() {
         aria-label="Loyalty membership"
         className="rounded-xl border border-line px-4 py-3"
       >
-        <h3 className="text-sm font-medium">Become a member</h3>
+        <h3 className="text-sm font-medium">Activate your membership</h3>
         <p className="mt-1 text-xs text-ink-soft">
-          Complete your profile membership details to earn and redeem loyalty
-          points.
+          Add your date of birth and mobile number in your profile to earn and
+          redeem loyalty points.
         </p>
         <Link
           href="/account/profile"
           className="mt-2 inline-block text-sm font-medium underline underline-offset-4"
         >
-          Join from Profile
+          Complete your profile
         </Link>
       </section>
     );

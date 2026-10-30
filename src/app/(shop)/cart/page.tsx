@@ -68,7 +68,7 @@ function Cart() {
           <p className="text-ink-soft">
             Looks like you haven&apos;t added anything yet.
           </p>
-          <ButtonLink href="/c/new-arrivals" size="lg">
+          <ButtonLink href="/collections/new-arrivals" size="lg">
             Explore new arrivals
           </ButtonLink>
         </div>
@@ -81,7 +81,7 @@ function Cart() {
             <ul className="divide-y divide-line border-y border-line">
               {items.map((i) => (
                 <li key={i.key} className="flex gap-4 py-5 sm:gap-6">
-                  <Link href={`/p/${i.slug}`} className="shrink-0">
+                  <Link href={`/products/${i.slug}`} className="shrink-0">
                     <Image
                       src={i.image}
                       alt=""
@@ -94,7 +94,7 @@ function Cart() {
                     <div className="flex justify-between gap-4">
                       <div className="min-w-0">
                         <Link
-                          href={`/p/${i.slug}`}
+                          href={`/products/${i.slug}`}
                           className="line-clamp-2 font-medium hover:underline"
                         >
                           {i.title}

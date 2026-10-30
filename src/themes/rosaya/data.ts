@@ -22,7 +22,7 @@ export function collectionTiles(
         label: collection.name,
         image:
           collection.image || covers[collection.slug] || "/placeholder.svg",
-        href: `/c/${collection.slug}`,
+        href: `/collections/${collection.slug}`,
       },
     ];
   });
@@ -43,11 +43,11 @@ export function headerMenu(collections: NavigationCollection[], limit: number) {
     .slice(0, limit)
     .map((c) => ({
       label: c.name,
-      href: `/c/${c.slug}`,
+      href: `/collections/${c.slug}`,
       children: c.header_dropdown
         ? c.dropdown_collections.map((child) => ({
             label: child.name,
-            href: `/c/${child.slug}`,
+            href: `/collections/${child.slug}`,
           }))
         : [],
     }));

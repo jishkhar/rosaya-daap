@@ -36,19 +36,14 @@ type Ctx = {
     name: string;
     email: string;
     password: string;
-    phone?: string;
+    phone: string;
+    birthday: string;
   }) => Promise<Result>;
   logout: () => Promise<void>;
   updateProfile: (v: {
     name?: string;
     phone?: string;
     birthday?: string;
-  }) => Promise<Result>;
-  enrollMembership: (v: {
-    name: string;
-    birthday: string;
-    phone: string;
-    email: string;
   }) => Promise<Result>;
   refreshUser: () => Promise<void>;
 };
@@ -93,15 +88,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout: async () => {
       await call("/api/auth/logout", { method: "POST", body: {} });
       setUser(null);
-    },
-    enrollMembership: async (v) => {
-      const r = await call<User>("/api/me/membership", {
-        method: "POST",
-        body: v,
-      });
-      if (!r.ok) return { ok: false, error: r.error };
-      setUser(r.data);
-      return { ok: true };
     },
     updateProfile: async (v) => {
       const r = await call<User>("/api/me", { method: "PATCH", body: v });

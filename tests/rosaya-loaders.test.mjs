@@ -111,12 +111,12 @@ test("tile loaders use live ERP metadata and omit removed selections", async () 
       {
         label: "Silks",
         image: "https://media.example/silk.webp",
-        href: "/c/silks",
+        href: "/collections/silks",
       },
       {
         label: "My selection",
         image: "https://media.example/cover.webp",
-        href: "/c/collection-tenant-choice",
+        href: "/collections/collection-tenant-choice",
       },
     ],
   );

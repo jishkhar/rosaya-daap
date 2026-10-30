@@ -52,14 +52,16 @@ export function Footer({
         ? [
             ...collections
               .slice(0, 6)
-              .map((c) => ({ label: c.name, href: `/c/${c.slug}` })),
+              .map((c) => ({ label: c.name, href: `/collections/${c.slug}` })),
             { label: "All collections", href: "/collections" },
           ]
         : []),
       ...column.links.flatMap((link) => {
-        const current = collections.find((c) => link.href === `/c/${c.slug}`);
+        const current = collections.find(
+          (c) => link.href === `/collections/${c.slug}`,
+        );
         if (current) return [{ ...link, label: current.name }];
-        return link.href.startsWith("/c/collection-") ? [] : [link];
+        return link.href.startsWith("/collections/collection-") ? [] : [link];
       }),
     ],
   }));

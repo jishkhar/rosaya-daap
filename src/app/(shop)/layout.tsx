@@ -1,3 +1,4 @@
+import { ExchangeBanner } from "@/components/exchange/ExchangeBanner";
 import { StorefrontHeader } from "@/components/StorefrontHeader";
 import { policyLinks } from "@/lib/policies";
 import { getPolicies, getStoreCollections } from "@/lib/store";
@@ -42,6 +43,7 @@ export default async function ShopLayout({
   return (
     <>
       <StorefrontHeader />
+      <ExchangeBanner />
       <main id="main">{children}</main>
       <Suspense
         fallback={

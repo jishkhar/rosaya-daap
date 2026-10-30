@@ -29,7 +29,7 @@ export function Footer({
         ? [
             ...collections
               .slice(0, 6)
-              .map((c) => ({ label: c.name, href: `/c/${c.slug}` })),
+              .map((c) => ({ label: c.name, href: `/collections/${c.slug}` })),
             { label: "All collections", href: "/collections" },
           ]
         : []),

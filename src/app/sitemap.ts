@@ -12,7 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "",
     "/shop",
     "/collections",
-    "/c/new-arrivals",
+    "/collections/new-arrivals",
     "/about",
     "/contact",
     "/help/shipping",
@@ -24,12 +24,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const products: MetadataRoute.Sitemap = [];
   try {
     (await getCatalogue()).forEach((c) =>
-      cols.push({ url: `${base}/c/${c.slug}`, lastModified: now }),
+      cols.push({ url: `${base}/collections/${c.slug}`, lastModified: now }),
     );
     const custom = await getStoreCollections();
     custom.forEach((c) =>
       cols.push({
-        url: `${base}/c/${c.slug}`,
+        url: `${base}/collections/${c.slug}`,
         lastModified: new Date(c.updated_at),
       }),
     );
@@ -41,7 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const page = await listProducts({ limit: 100, offset, revalidate: 3600 });
       page.items.forEach((p) =>
         products.push({
-          url: `${base}/p/${p.slug}`,
+          url: `${base}/products/${p.slug}`,
           lastModified: new Date(p.date),
         }),
       );

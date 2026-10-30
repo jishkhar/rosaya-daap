@@ -64,7 +64,7 @@ export default function ReturnsPage() {
           role="status"
           className="mt-4 rounded-xl bg-success/10 p-3 text-sm text-success"
         >
-          Return request sent. The shop will review it and let you know.
+          Request sent. The shop will review it and let you know.
         </p>
       )}
       {(error || cancelError) && (
@@ -137,13 +137,40 @@ export default function ReturnsPage() {
                       {PREFERENCES[r.preference].label}
                     </p>
                   )}
+                  {r.kind === "exchange" && r.replacement.length > 0 && (
+                    <p>
+                      <span className="text-ink">Exchange for:</span>{" "}
+                      {r.replacement
+                        .map((x) => `${x.name} × ${x.quantity}`)
+                        .join(", ")}
+                    </p>
+                  )}
+                  {r.kind === "exchange" && r.status === "completed" && (
+                    <p>
+                      {r.exchange_order_number && (
+                        <>
+                          <span className="text-ink">Replacement order:</span> #
+                          {r.exchange_order_number}.{" "}
+                        </>
+                      )}
+                      {r.difference_minor > 0
+                        ? r.exchange_payment === "online"
+                          ? `You pay ${formatINR(r.difference_minor / 100)} more: use Pay on that order in your Orders.`
+                          : `You pay ${formatINR(r.difference_minor / 100)} more, in cash on delivery.`
+                        : r.loyalty_points > 0
+                          ? `${r.loyalty_points.toLocaleString("en-IN")} loyalty points were added for the difference.`
+                          : "Same value: nothing to pay."}
+                    </p>
+                  )}
                   {r.status === "completed" && r.refund_minor > 0 && (
                     <p>
-                      <span className="text-ink">Refunded:</span>{" "}
+                      <span className="text-ink">Repaid:</span>{" "}
                       {formatINR(r.refund_minor / 100)}
                       {r.refund_mode === "store_credit"
                         ? " as store credit"
-                        : ""}
+                        : r.refund_mode === "loyalty_points"
+                          ? ` as ${r.loyalty_points.toLocaleString("en-IN")} loyalty points`
+                          : ""}
                     </p>
                   )}
                   {r.decision_note && (
