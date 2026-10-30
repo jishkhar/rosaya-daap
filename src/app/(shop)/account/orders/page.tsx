@@ -13,9 +13,11 @@ import {
   type OrderStage,
 } from "@/lib/account";
 import { useAuth } from "@/lib/auth";
+import { useBrand } from "@/lib/brand";
 import { useCart } from "@/lib/cart";
-import { call, goTo } from "@/lib/http";
+import { call } from "@/lib/http";
 import { formatINR } from "@/lib/money";
+import { payOrder } from "@/lib/payOrder";
 import { longDate, type Returnable } from "@/lib/returns";
 import { CancelOrder } from "@/components/account/CancelOrder";
 import { ButtonLink } from "@/components/ui/Button";
@@ -49,6 +51,7 @@ export default function OrdersPage() {
     reload,
   } = useRemoteList<ApiOrder>("/api/me/orders", !!user);
   const { add } = useCart();
+  const brand = useBrand();
   const [open, setOpen] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
@@ -63,17 +66,9 @@ export default function OrdersPage() {
 
   const payNow = async (o: ApiOrder) => {
     setPayError(null);
-    const r = await call<{ mode: string; url: string | null }>(
-      `/api/orders/${o.id}/pay`,
-      { method: "POST", body: {} },
-    );
-    if (!r.ok) return setPayError(r.error);
-    goTo(
-      r.data.url ??
-        (r.data.mode === "mock"
-          ? `/pay/${o.id}`
-          : `/checkout?order=${encodeURIComponent(o.id)}`),
-    );
+    const problem = await payOrder(o.id, brand);
+    if (problem) setPayError(problem);
+    void reload();
   };
 
   return (
@@ -125,6 +120,8 @@ export default function OrdersPage() {
               o.payment_method === "online" &&
               o.payment_status !== "paid" &&
               o.status === "pending";
+            // an unpaid online order, or cash on delivery before it ships
+            const canPay = o.can_pay_online ?? unpaid;
             return (
               <li
                 key={o.id}
@@ -306,12 +303,14 @@ export default function OrdersPage() {
                         )}
                       </div>
                       <div className="flex gap-2">
-                        {unpaid && (
+                        {canPay && (
                           <button
                             onClick={() => payNow(o)}
                             className="h-11 rounded-full bg-ink px-6 font-medium text-cream hover:bg-taupe-dark"
                           >
-                            Pay now
+                            {o.payment_method === "cod"
+                              ? "Pay online now"
+                              : "Pay now"}
                           </button>
                         )}
                         <button

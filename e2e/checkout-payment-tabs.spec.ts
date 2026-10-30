@@ -224,7 +224,7 @@ test("payment submits only on confirmation, locks controls while placing, and re
     page.getByRole("button", { name: "Back to delivery" }),
   ).toBeDisabled();
   await expect(page.getByLabel("Coupon code", { exact: true })).toBeDisabled();
-  await expect(page.getByRole("radio", { name: /Pay online/ })).toBeDisabled();
+  await expect(page.getByRole("radio", { name: /^UPI/ })).toBeDisabled();
   release!();
   await expect(page.locator("#main").getByRole("alert")).toContainText(
     "Please retry your order.",
@@ -251,7 +251,7 @@ test("the Payment tab respects unavailable COD and hands online payment to the g
   await expect(
     page.getByRole("radio", { name: /Cash on delivery/ }),
   ).toBeDisabled();
-  await expect(page.getByRole("radio", { name: /Pay online/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /^UPI/ })).toBeChecked();
   await expect(
     page.getByText("Cash on delivery is unavailable in this area.", {
       exact: true,
@@ -276,9 +276,110 @@ test("the Payment tab respects unavailable COD and hands online payment to the g
       },
     });
   });
-  await page.getByRole("button", { name: /^Pay online ·/ }).click();
+  await page.getByRole("button", { name: /^Pay ·/ }).click();
   await expect(page).toHaveURL(/\/test-gateway$/);
   await expect(
     page.getByRole("heading", { name: "Secure payment fixture" }),
   ).toBeVisible();
+});
+
+test("each way to pay is listed on our page and Razorpay opens at the one chosen", async ({
+  page,
+}) => {
+  await page.route("**/api/payment-options", (route) =>
+    route.fulfill({
+      json: {
+        available: true,
+        upi: true,
+        card: true,
+        wallet: true,
+        emi: false,
+        popular_banks: [
+          ["HDFC", "HDFC Bank"],
+          ["SBIN", "State Bank of India"],
+        ],
+        banks: [
+          ["HDFC", "HDFC Bank"],
+          ["SBIN", "State Bank of India"],
+          ["YESB", "Yes Bank"],
+        ],
+      },
+    }),
+  );
+  // Razorpay's Checkout script, faked: records what it was opened with and "pays" at once
+  await page.route("https://checkout.razorpay.com/v1/checkout.js", (route) =>
+    route.fulfill({
+      contentType: "application/javascript",
+      body: `window.Razorpay = function (o) {
+        window.__rzp = o;
+        this.on = function () {};
+        this.open = function () {
+          setTimeout(function () {
+            o.handler({ razorpay_order_id: o.order_id, razorpay_payment_id: "pay_TEST1", razorpay_signature: "sig" });
+          }, 50);
+        };
+      };`,
+    }),
+  );
+  await checkout(page, false);
+  await fillAddress(page, { phone: "9876543210" });
+  await page.getByRole("button", { name: "Continue to payment" }).click();
+  const payment = page.getByRole("tabpanel", { name: "Payment", exact: true });
+  for (const name of [/^UPI/, /^Credit \/ Debit/, /^Net banking/, /^Wallets/])
+    await expect(payment.getByRole("radio", { name })).toBeVisible();
+  await expect(payment.getByRole("radio", { name: /^EMI/ })).toHaveCount(0);
+  await payment.getByRole("radio", { name: /^Net banking/ }).check();
+  await payment.getByRole("radio", { name: "HDFC Bank" }).check();
+  await expect(payment.getByLabel("Other banks")).toContainText("Yes Bank");
+
+  let confirmed: unknown = null;
+  await page.route("**/api/checkout", (route) =>
+    route.fulfill({
+      status: 201,
+      json: {
+        order: { id: "online-order" },
+        payment: {
+          mode: "checkout",
+          url: null,
+          checkout: {
+            key_id: "rzp_test_x",
+            razorpay_order_id: "order_TEST1",
+            amount_minor: 100000,
+            currency: "INR",
+            description: "Order ORD1",
+            notes: {},
+            prefill: { name: "Asha", email: null, contact: "+919876543210" },
+          },
+        },
+      },
+    }),
+  );
+  await page.route("**/api/orders/online-order/pay/confirm", (route) => {
+    confirmed = route.request().postDataJSON();
+    return route.fulfill({ json: { id: "online-order" } });
+  });
+  await page.getByRole("button", { name: /^Pay ·/ }).click();
+  await expect
+    .poll(() => confirmed)
+    .toEqual({
+      razorpay_order_id: "order_TEST1",
+      razorpay_payment_id: "pay_TEST1",
+      razorpay_signature: "sig",
+    });
+  const opened = await page.evaluate(
+    () => (window as unknown as { __rzp: Record<string, unknown> }).__rzp,
+  );
+  expect(opened.order_id).toBe("order_TEST1");
+  expect(opened.config).toEqual({
+    display: {
+      blocks: {
+        chosen: {
+          name: "Pay with",
+          instruments: [{ method: "netbanking", banks: ["HDFC"] }],
+        },
+      },
+      sequence: ["block.chosen"],
+      preferences: { show_default_blocks: false },
+    },
+  });
 });

@@ -16,12 +16,23 @@ import {
 import { CouponBox } from "@/components/cart/CouponBox";
 import { Totals } from "@/components/cart/Totals";
 import { OrderConfirmationModal } from "@/components/checkout/OrderConfirmationModal";
+import {
+  PaymentOptions,
+  type PayWay,
+} from "@/components/checkout/PaymentOptions";
 import { type Address as SavedAddress } from "@/lib/account";
 import { useAuth } from "@/lib/auth";
+import { useBrand } from "@/lib/brand";
 import { useStoreFeatures } from "@/lib/features";
 import type { User } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { useDeliverTo } from "@/lib/deliverTo";
+import {
+  openCheckout,
+  type CheckoutStart,
+  type PaymentChoice,
+  type PaymentOptions as PayOptions,
+} from "@/lib/razorpay";
 import { call, goTo } from "@/lib/http";
 import {
   lookupPincode,
@@ -78,7 +89,11 @@ const field =
 
 type Placed = {
   order: { id: string };
-  payment: { mode: "cod" | "gateway" | "mock" | null; url: string | null };
+  payment: {
+    mode: "cod" | "checkout" | "gateway" | "mock" | null;
+    url: string | null;
+    checkout?: CheckoutStart;
+  };
 };
 
 export default function CheckoutForm({
@@ -171,9 +186,26 @@ export default function CheckoutForm({
   };
   // the shop can switch online payment off (cash on delivery only)
   const { payments: onlinePay } = useStoreFeatures();
-  const [pay, setPay] = useState<"online" | "cod">(
-    onlinePay ? "online" : "cod",
-  );
+  // Flipkart-style: the shopper picks UPI / card / net banking / wallet / EMI here; Razorpay's window then opens at that choice
+  const brand = useBrand();
+  const [payOptions, setPayOptions] = useState<PayOptions | null>(null);
+  const [pay, setPay] = useState<PayWay>(onlinePay ? "upi" : "cod");
+  const [bank, setBank] = useState<string | null>(null);
+  useEffect(() => {
+    if (!onlinePay) return;
+    void call<PayOptions>("/api/payment-options").then((r) => {
+      if (!r.ok) return;
+      setPayOptions(r.data);
+      // start on the first way the shop's account takes
+      setPay((cur) =>
+        cur !== "upi" || r.data.upi !== false
+          ? cur
+          : r.data.card
+            ? "card"
+            : "netbanking",
+      );
+    });
+  }, [onlinePay]);
   // The delivery time of the address's zone (from the quote), else the shop's default one.
   const zoneDays = quote?.delivery
     ? {
@@ -187,6 +219,14 @@ export default function CheckoutForm({
     quote?.delivery && !quote.delivery.cod_available
       ? (quote.delivery.cod_reason ?? "Not available for this address.")
       : null;
+  const onlineOff = !onlinePay || payOptions?.available === false; // no online way (switched off, or no Razorpay keys)
+  const payWay: PayWay = onlineOff
+    ? "cod"
+    : pay === "cod" && codOff
+      ? payOptions?.upi === false
+        ? "card"
+        : "upi"
+      : pay;
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [placing, setPlacing] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -288,7 +328,7 @@ export default function CheckoutForm({
         state: addr.state.trim(),
         pincode: addr.pincode,
       },
-      payment_method: codOff && onlinePay ? "online" : pay,
+      payment_method: payWay === "cod" ? "cod" : "online",
       expected_total_minor: quote?.grand_total_minor,
     };
     // One Idempotency-Key per distinct order attempt: a double click or a retry after a timeout replays the same order.
@@ -315,14 +355,37 @@ export default function CheckoutForm({
     setPlaced(true);
     clear();
     void refreshUser();
-    if (payment.mode === "gateway" && payment.url) goTo(payment.url);
-    else if (payment.mode === "mock") router.push(`/pay/${order.id}`);
-    else {
+    const showOrder = () => {
       setCompletedOrderId(order.id);
       router.replace(`/checkout?order=${encodeURIComponent(order.id)}`, {
         scroll: false,
       });
-    }
+    };
+    if (payment.mode === "checkout" && payment.checkout) {
+      // Razorpay's window at the chosen way. Closed without paying: the order waits (its confirmation offers Pay now).
+      const choice: PaymentChoice =
+        payWay === "netbanking"
+          ? { method: "netbanking", bank: bank ?? undefined }
+          : { method: payWay as Exclude<PayWay, "cod" | "netbanking"> };
+      try {
+        const paid = await openCheckout({
+          start: payment.checkout,
+          shopName: brand.name,
+          logo: brand.logo,
+          choice,
+        });
+        if (paid)
+          await call(`/api/orders/${order.id}/pay/confirm`, {
+            method: "POST",
+            body: paid,
+          });
+      } catch {
+        // Razorpay couldn't load: the order is saved and its page offers Pay now
+      }
+      showOrder();
+    } else if (payment.mode === "gateway" && payment.url) goTo(payment.url);
+    else if (payment.mode === "mock") router.push(`/pay/${order.id}`);
+    else showOrder();
   };
 
   if (!user)
@@ -758,46 +821,18 @@ export default function CheckoutForm({
                     <ArrowLeft className="h-3.5 w-3.5" /> Back to delivery
                   </button>
                 </div>
-                <div
-                  className="space-y-3"
-                  role="radiogroup"
-                  aria-label="Payment method"
-                >
-                  {(
-                    [
-                      [
-                        "online",
-                        "Pay online",
-                        "UPI, cards, netbanking, wallets via Razorpay",
-                      ],
-                      [
-                        "cod",
-                        "Cash on delivery",
-                        codOff ?? "Pay when your order arrives",
-                      ],
-                    ] as const
-                  )
-                    .filter(([v]) => onlinePay || v === "cod")
-                    .map(([v, t, d]) => (
-                      <label
-                        key={v}
-                        className={`flex items-start gap-4 rounded-xl border p-4 ${v === "cod" && codOff ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${(codOff ? "online" : pay) === v ? "border-[#75414b] bg-[#fbf4f1]" : "border-line"}`}
-                      >
-                        <input
-                          type="radio"
-                          name="pay"
-                          disabled={placing || (v === "cod" && !!codOff)}
-                          checked={(codOff ? "online" : pay) === v}
-                          onChange={() => setPay(v)}
-                          className="mt-1 h-4 w-4 accent-[#43262b]"
-                        />
-                        <span>
-                          <span className="block font-medium">{t}</span>
-                          <span className="text-sm text-ink-soft">{d}</span>
-                        </span>
-                      </label>
-                    ))}
-                </div>
+                <PaymentOptions
+                  options={payOptions}
+                  onlinePay={onlinePay}
+                  value={payWay}
+                  bank={bank}
+                  codOff={codOff}
+                  disabled={placing}
+                  onChange={(way, b) => {
+                    setPay(way);
+                    setBank(b);
+                  }}
+                />
               </Card>
             </div>
           </div>
@@ -853,7 +888,7 @@ export default function CheckoutForm({
                         ? "Updating total…"
                         : step === 0
                           ? "Continue to payment"
-                          : `${pay === "cod" && !codOff ? "Place order" : "Pay online"} · ${formatINR(total)}`}
+                          : `${payWay === "cod" ? "Place order" : "Pay"} · ${formatINR(total)}`}
                 </button>
                 <p className="mt-3 text-center text-xs text-ink-soft">
                   By placing your order you agree to our{" "}

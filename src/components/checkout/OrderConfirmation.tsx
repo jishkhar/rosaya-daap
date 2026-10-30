@@ -5,14 +5,18 @@ import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, Clock, Package, Truck } from "lucide-react";
 import { ButtonLink } from "@/components/ui/Button";
 import { addressLine, type ApiOrder } from "@/lib/account";
-import { call, goTo } from "@/lib/http";
+import { useBrand } from "@/lib/brand";
+import { call } from "@/lib/http";
 import { formatINR } from "@/lib/money";
+import { payOrder } from "@/lib/payOrder";
 import { daysText } from "@/lib/shipping";
 import { useShipping } from "@/lib/shippingContext";
 
 /** Check the order itself: a payment return URL does not prove that payment succeeded. */
 export function OrderConfirmation({ id }: { id: string }) {
   const shipping = useShipping();
+  const brand = useBrand();
+  const [paying, setPaying] = useState(false);
   const [o, setO] = useState<ApiOrder | null>(null);
   const [missing, setMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,14 +53,11 @@ export function OrderConfirmation({ id }: { id: string }) {
 
   const payNow = async () => {
     setError(null);
-    const r = await call<{ mode: string; url: string | null }>(
-      `/api/orders/${id}/pay`,
-      { method: "POST", body: {} },
-    );
-    if (!r.ok) return setError(r.error);
-    if (r.data.url) goTo(r.data.url);
-    else if (r.data.mode === "mock") goTo(`/pay/${id}`);
-    else void load();
+    setPaying(true);
+    const problem = await payOrder(id, brand);
+    setPaying(false);
+    if (problem) setError(problem);
+    void load();
   };
 
   if (missing)
@@ -122,9 +123,12 @@ export function OrderConfirmation({ id }: { id: string }) {
           </p>
           <button
             onClick={payNow}
-            className="mt-6 h-12 rounded-full bg-ink px-8 text-sm font-medium text-cream hover:bg-taupe-dark"
+            disabled={paying}
+            className="mt-6 h-12 rounded-full bg-ink px-8 text-sm font-medium text-cream hover:bg-taupe-dark disabled:opacity-60"
           >
-            Complete payment · {formatINR(o.total_minor / 100)}
+            {paying
+              ? "Opening payment…"
+              : `Complete payment · ${formatINR(o.total_minor / 100)}`}
           </button>
           {error && (
             <p role="alert" className="mt-3 text-sm text-danger">
@@ -170,6 +174,32 @@ export function OrderConfirmation({ id }: { id: string }) {
           </dd>
         </div>
       </dl>
+
+      {!cancelled &&
+        !waiting &&
+        o.payment_method === "cod" &&
+        o.can_pay_online && (
+          <div className="mt-6 rounded-2xl border border-line bg-white p-5 text-sm">
+            <p className="font-medium">Skip the cash at your door</p>
+            <p className="mt-1 text-ink-soft">
+              Pay online now with UPI, card, net banking or a wallet.
+            </p>
+            <button
+              onClick={payNow}
+              disabled={paying}
+              className="mt-4 h-11 rounded-full bg-ink px-6 font-medium text-cream hover:bg-taupe-dark disabled:opacity-60"
+            >
+              {paying
+                ? "Opening payment…"
+                : `Pay online · ${formatINR((o.total_minor - o.paid_minor) / 100)}`}
+            </button>
+            {error && (
+              <p role="alert" className="mt-3 text-danger">
+                {error}
+              </p>
+            )}
+          </div>
+        )}
 
       {!cancelled && !waiting && (
         <ol className="mt-8 space-y-3 rounded-2xl bg-sand/70 p-6 text-left text-sm">

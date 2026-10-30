@@ -66,7 +66,7 @@ test("register, save an address, pay online, see the order, reorder, sign out an
     page.getByRole("button", { name: /continue to payment/i }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Continue to payment" }).click();
-  await page.getByRole("button", { name: /^Pay online ·/ }).click();
+  await page.getByRole("button", { name: /^Pay ·/ }).click();
   await expect(page).toHaveURL(/\/pay\//);
   await page.getByRole("button", { name: /pay now \(test\)/i }).click();
   await expect(page).toHaveURL(/\/checkout\?order=[0-9a-f-]+$/);

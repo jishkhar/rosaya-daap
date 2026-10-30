@@ -29,6 +29,8 @@ export type ApiOrder = {
   paid_minor: number;
   payment_method: "cod" | "online" | null;
   payment_url: string | null;
+  /** Unpaid online order, or cash on delivery before it ships: the shopper may pay online now. */
+  can_pay_online?: boolean;
   delivery_address: {
     name?: string;
     line1?: string;
