@@ -13,12 +13,34 @@ import {
 } from "lucide-react";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useAuth } from "@/lib/auth";
+import { useStoreFeatures, type StoreFeatures } from "@/lib/features";
 
-const TABS = [
+// `needs`: the shop's website feature the tab is part of (returns start from an order, so they go with order tracking)
+const ALL_TABS: {
+  href: string;
+  label: string;
+  icon: typeof User;
+  needs?: keyof StoreFeatures;
+}[] = [
   { href: "/account", label: "Overview", icon: LayoutDashboard },
-  { href: "/account/orders", label: "Orders", icon: Package },
-  { href: "/account/returns", label: "Returns", icon: RotateCcw },
-  { href: "/account/addresses", label: "Addresses", icon: MapPin },
+  {
+    href: "/account/orders",
+    label: "Orders",
+    icon: Package,
+    needs: "tracking",
+  },
+  {
+    href: "/account/returns",
+    label: "Returns",
+    icon: RotateCcw,
+    needs: "tracking",
+  },
+  {
+    href: "/account/addresses",
+    label: "Addresses",
+    icon: MapPin,
+    needs: "addresses",
+  },
   { href: "/account/profile", label: "Profile", icon: User },
 ];
 
@@ -31,6 +53,14 @@ export default function AccountLayout({
   const { user, ready, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const features = useStoreFeatures();
+  const TABS = ALL_TABS.filter((t) => !t.needs || features[t.needs]);
+  const blocked = ALL_TABS.find(
+    (t) =>
+      t.needs &&
+      !features[t.needs] &&
+      (pathname === t.href || pathname.startsWith(`${t.href}/`)),
+  );
   const leaving = useRef(false); // logging out sends you home, not to /login
 
   useEffect(() => {
@@ -95,7 +125,15 @@ export default function AccountLayout({
             <LogOut className="h-4 w-4" /> Log out
           </button>
         </nav>
-        <div className="min-w-0">{children}</div>
+        <div className="min-w-0">
+          {blocked ? (
+            <p className="rounded-2xl bg-sand/70 p-6 text-ink-soft">
+              {blocked.label} aren&apos;t available on this shop&apos;s website.
+            </p>
+          ) : (
+            children
+          )}
+        </div>
       </div>
     </div>
   );

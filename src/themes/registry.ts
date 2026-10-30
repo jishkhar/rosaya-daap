@@ -11,6 +11,7 @@ import {
   type StoreIdentity,
   type ThemeConfig,
 } from "@/themes/schema";
+import { ALL_FEATURES, toFeatures, type StoreFeatures } from "@/lib/features";
 import type { Shipping } from "@/lib/shipping";
 import type { Theme } from "@/themes/types";
 
@@ -46,6 +47,8 @@ export const getStorefront = cache(
     primaryHost: string | null;
     /** The shop's delivery fee and time; null when unknown. */
     shipping: Shipping | null;
+    /** Which parts of the website the shop has on (the platform's Online options). */
+    features: StoreFeatures;
   }> => {
     const jar = await cookies();
     const livePreview = jar.get(LIVE_PREVIEW_COOKIE)?.value === "1";
@@ -68,6 +71,14 @@ export const getStorefront = cache(
       else if (e instanceof ApiError && e.status === 403) status = "closed";
       return null; // anything else (API down): render the default theme; pages show their own "unavailable" notices
     });
+    const features =
+      status === "open"
+        ? await api<{ options: Record<string, boolean> }>("/features", {
+            revalidate: LIVE_REVALIDATE,
+          })
+            .then((r) => toFeatures(r.options))
+            .catch(() => ALL_FEATURES)
+        : ALL_FEATURES;
     const known = data?.theme_key ? themes[data.theme_key] : undefined;
     const theme = known ?? heritage;
     const config = resolveConfig(
@@ -82,6 +93,7 @@ export const getStorefront = cache(
       status,
       primaryHost: data?.store?.primary_host ?? null,
       shipping: data?.store?.shipping ?? null,
+      features,
     };
   },
 );

@@ -10,9 +10,27 @@ import { Totals } from "@/components/cart/Totals";
 import { ButtonLink } from "@/components/ui/Button";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useCart } from "@/lib/cart";
+import { useStoreFeatures } from "@/lib/features";
 import { formatINR } from "@/lib/money";
 
 export default function CartPage() {
+  const { cart } = useStoreFeatures();
+  return cart ? (
+    <Cart />
+  ) : (
+    <div className="mx-auto max-w-md px-4 py-20 text-center">
+      <h1 className="font-heading text-3xl font-medium">
+        Online ordering is closed
+      </h1>
+      <p className="mt-3 text-ink-soft">
+        This shop isn&apos;t taking orders on its website at the moment. Please
+        contact the shop to order.
+      </p>
+    </div>
+  );
+}
+
+function Cart() {
   const {
     items,
     setQty,

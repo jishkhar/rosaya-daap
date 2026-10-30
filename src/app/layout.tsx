@@ -35,7 +35,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { theme, config, status, primaryHost, shipping } =
+  const { theme, config, status, primaryHost, shipping, features } =
     await getStorefront();
   // A shop's other addresses (platform address, non-primary domains) answer 308 to the primary one, same path.
   const target = await primaryRedirect(primaryHost);
@@ -43,12 +43,16 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={`min-h-screen overflow-x-clip ${theme.className ?? ""}`}>
-        {status === "open" ? (
-          <Providers brand={config.settings.brand as Brand} shipping={shipping}>
+        {status === "open" && features.browse ? (
+          <Providers
+            brand={config.settings.brand as Brand}
+            shipping={shipping}
+            features={features}
+          >
             {children}
           </Providers>
         ) : (
-          <NoShop status={status} />
+          <NoShop status={status === "open" ? "closed" : status} />
         )}
       </body>
     </html>

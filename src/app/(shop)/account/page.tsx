@@ -9,12 +9,20 @@ import {
   type ApiOrder,
 } from "@/lib/account";
 import { useAuth } from "@/lib/auth";
+import { useStoreFeatures } from "@/lib/features";
 import { formatINR } from "@/lib/money";
 
 export default function AccountOverview() {
   const { user } = useAuth();
-  const orders = useRemoteList<ApiOrder>("/api/me/orders", !!user);
-  const addresses = useRemoteList<Address>("/api/me/addresses", !!user);
+  const features = useStoreFeatures();
+  const orders = useRemoteList<ApiOrder>(
+    "/api/me/orders",
+    !!user && features.tracking,
+  );
+  const addresses = useRemoteList<Address>(
+    "/api/me/addresses",
+    !!user && features.addresses,
+  );
   if (!user) return null;
   const latest = orders.items[0];
 
@@ -34,18 +42,26 @@ export default function AccountOverview() {
 
       <ul className="mt-8 grid gap-3 sm:grid-cols-3">
         {[
-          {
-            href: "/account/orders",
-            icon: Package,
-            title: "Orders",
-            text: `${orders.items.length} placed`,
-          },
-          {
-            href: "/account/addresses",
-            icon: MapPin,
-            title: "Addresses",
-            text: `${addresses.items.length} saved`,
-          },
+          ...(features.tracking
+            ? [
+                {
+                  href: "/account/orders",
+                  icon: Package,
+                  title: "Orders",
+                  text: `${orders.items.length} placed`,
+                },
+              ]
+            : []),
+          ...(features.addresses
+            ? [
+                {
+                  href: "/account/addresses",
+                  icon: MapPin,
+                  title: "Addresses",
+                  text: `${addresses.items.length} saved`,
+                },
+              ]
+            : []),
           {
             href: "/account/profile",
             icon: User,

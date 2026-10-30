@@ -11,6 +11,7 @@ import type { StoreCollection } from "@/lib/store";
 import type { Values } from "@/themes/schema";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
+import { useStoreFeatures } from "@/lib/features";
 import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
 export function Header({
@@ -25,6 +26,7 @@ export function Header({
     .sort((a, b) => a.header_order - b.header_order)
     .slice(0, settings.menu_limit as number);
   const { count, setOpen } = useCart();
+  const features = useStoreFeatures();
   const { user } = useAuth();
   const [mobile, setMobile] = useState(false);
   const [search, setSearch] = useState(false);
@@ -80,25 +82,29 @@ export function Header({
               <span className="hidden xl:inline">Search</span>
             </button>
           ) : null}
-          <Link
-            href={user ? "/account" : "/login"}
-            className="hidden rounded-full p-2.5 hover:bg-sand sm:block"
-            aria-label={user ? "My account" : "Log in"}
-          >
-            <User className="h-[22px] w-[22px]" />
-          </Link>
-          <button
-            className="touch-target relative rounded-full p-2.5 hover:bg-sand"
-            aria-label={`Cart, ${count} items`}
-            onClick={() => setOpen(true)}
-          >
-            <ShoppingBag className="h-[22px] w-[22px]" />
-            {count > 0 && (
-              <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">
-                {count}
-              </span>
-            )}
-          </button>
+          {features.accounts && (
+            <Link
+              href={user ? "/account" : "/login"}
+              className="hidden rounded-full p-2.5 hover:bg-sand sm:block"
+              aria-label={user ? "My account" : "Log in"}
+            >
+              <User className="h-[22px] w-[22px]" />
+            </Link>
+          )}
+          {features.cart && (
+            <button
+              className="touch-target relative rounded-full p-2.5 hover:bg-sand"
+              aria-label={`Cart, ${count} items`}
+              onClick={() => setOpen(true)}
+            >
+              <ShoppingBag className="h-[22px] w-[22px]" />
+              {count > 0 && (
+                <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">
+                  {count}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -134,6 +140,7 @@ function MobileMenu({
   onClose: () => void;
 }) {
   const { user } = useAuth();
+  const features = useStoreFeatures();
   return (
     <div
       className="fixed inset-0 z-50 xl:hidden"
@@ -178,14 +185,16 @@ function MobileMenu({
           </Link>
         </nav>
         <div className="shrink-0 border-t border-line p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          <Link
-            href={user ? "/account" : "/login"}
-            onClick={onClose}
-            className="flex items-center gap-2 text-sm font-medium"
-          >
-            <User className="h-5 w-5" />{" "}
-            {user ? user.name : "Log in / Register"}
-          </Link>
+          {features.accounts && (
+            <Link
+              href={user ? "/account" : "/login"}
+              onClick={onClose}
+              className="flex items-center gap-2 text-sm font-medium"
+            >
+              <User className="h-5 w-5" />{" "}
+              {user ? user.name : "Log in / Register"}
+            </Link>
+          )}
         </div>
       </div>
     </div>

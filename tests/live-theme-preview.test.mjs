@@ -44,10 +44,16 @@ function registry(cookies) {
       resolveConfig: (_, value) => value,
       withIdentity: (value) => value,
     },
+    "@/lib/features": {
+      ALL_FEATURES: { cart: true },
+      toFeatures: (options) => ({ cart: options["online.cart_checkout"] }),
+    },
     "@/lib/api": {
       ApiError: class extends Error {},
       api: async (path, opts) => {
         calls.push({ path, opts });
+        if (path === "/features")
+          return { options: { "online.cart_checkout": false } };
         return {
           theme_key: "rosaya",
           config: { mode: opts.preview ? "draft" : "published" },
@@ -56,7 +62,9 @@ function registry(cookies) {
       },
     },
   });
-  return { getStorefront, calls };
+  // the theme calls; the shop's website features (/features) are fetched alongside
+  const themeCalls = () => calls.filter((c) => c.path === "/theme");
+  return { getStorefront, calls, themeCalls };
 }
 
 test("live card ignores an old draft token and fetches published settings without cache", async () => {
@@ -65,16 +73,26 @@ test("live card ignores an old draft token and fetches published settings withou
   assert.equal(out.theme.key, "rosaya");
   assert.deepEqual(out.config, { mode: "published" });
   assert.equal(out.preview, false);
-  assert.deepEqual(f.calls, [{ path: "/theme", opts: {} }]);
+  assert.deepEqual(f.themeCalls(), [{ path: "/theme", opts: {} }]);
 });
 
 test("regular shoppers keep the cache and signed draft previews keep draft behavior", async () => {
   const live = registry({});
   await live.getStorefront();
-  assert.deepEqual(live.calls[0].opts, { revalidate: 30 });
+  assert.deepEqual(live.themeCalls()[0].opts, { revalidate: 30 });
   const draft = registry({ theme_preview: "signed-draft" });
   assert.equal((await draft.getStorefront()).preview, true);
-  assert.deepEqual(draft.calls[0].opts, { preview: "signed-draft" });
+  assert.deepEqual(draft.themeCalls()[0].opts, { preview: "signed-draft" });
+});
+
+test("the shop's website features come with the theme, cached like the live theme", async () => {
+  const f = registry({});
+  const out = await f.getStorefront();
+  assert.deepEqual(out.features, { cart: false });
+  assert.deepEqual(
+    f.calls.filter((c) => c.path === "/features"),
+    [{ path: "/features", opts: { revalidate: 30 } }],
+  );
 });
 
 function previewRoute() {

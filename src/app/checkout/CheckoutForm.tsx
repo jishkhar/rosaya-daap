@@ -18,6 +18,7 @@ import { Totals } from "@/components/cart/Totals";
 import { OrderConfirmationModal } from "@/components/checkout/OrderConfirmationModal";
 import { type Address as SavedAddress } from "@/lib/account";
 import { useAuth } from "@/lib/auth";
+import { useStoreFeatures } from "@/lib/features";
 import type { User } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { useDeliverTo } from "@/lib/deliverTo";
@@ -168,7 +169,11 @@ export default function CheckoutForm({
       });
     });
   };
-  const [pay, setPay] = useState<"online" | "cod">("online");
+  // the shop can switch online payment off (cash on delivery only)
+  const { payments: onlinePay } = useStoreFeatures();
+  const [pay, setPay] = useState<"online" | "cod">(
+    onlinePay ? "online" : "cod",
+  );
   // The delivery time of the address's zone (from the quote), else the shop's default one.
   const zoneDays = quote?.delivery
     ? {
@@ -283,7 +288,7 @@ export default function CheckoutForm({
         state: addr.state.trim(),
         pincode: addr.pincode,
       },
-      payment_method: codOff ? "online" : pay,
+      payment_method: codOff && onlinePay ? "online" : pay,
       expected_total_minor: quote?.grand_total_minor,
     };
     // One Idempotency-Key per distinct order attempt: a double click or a retry after a timeout replays the same order.
@@ -771,25 +776,27 @@ export default function CheckoutForm({
                         codOff ?? "Pay when your order arrives",
                       ],
                     ] as const
-                  ).map(([v, t, d]) => (
-                    <label
-                      key={v}
-                      className={`flex items-start gap-4 rounded-xl border p-4 ${v === "cod" && codOff ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${(codOff ? "online" : pay) === v ? "border-[#75414b] bg-[#fbf4f1]" : "border-line"}`}
-                    >
-                      <input
-                        type="radio"
-                        name="pay"
-                        disabled={placing || (v === "cod" && !!codOff)}
-                        checked={(codOff ? "online" : pay) === v}
-                        onChange={() => setPay(v)}
-                        className="mt-1 h-4 w-4 accent-[#43262b]"
-                      />
-                      <span>
-                        <span className="block font-medium">{t}</span>
-                        <span className="text-sm text-ink-soft">{d}</span>
-                      </span>
-                    </label>
-                  ))}
+                  )
+                    .filter(([v]) => onlinePay || v === "cod")
+                    .map(([v, t, d]) => (
+                      <label
+                        key={v}
+                        className={`flex items-start gap-4 rounded-xl border p-4 ${v === "cod" && codOff ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${(codOff ? "online" : pay) === v ? "border-[#75414b] bg-[#fbf4f1]" : "border-line"}`}
+                      >
+                        <input
+                          type="radio"
+                          name="pay"
+                          disabled={placing || (v === "cod" && !!codOff)}
+                          checked={(codOff ? "online" : pay) === v}
+                          onChange={() => setPay(v)}
+                          className="mt-1 h-4 w-4 accent-[#43262b]"
+                        />
+                        <span>
+                          <span className="block font-medium">{t}</span>
+                          <span className="text-sm text-ink-soft">{d}</span>
+                        </span>
+                      </label>
+                    ))}
                 </div>
               </Card>
             </div>

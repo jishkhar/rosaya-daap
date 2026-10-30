@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Tag, X } from "lucide-react";
 import { useCart, type Quote } from "@/lib/cart";
+import { useStoreFeatures } from "@/lib/features";
 import { formatINR } from "@/lib/money";
 import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
@@ -285,11 +286,17 @@ function CouponsModal({
   );
 }
 
+/** The discount-code box; nothing while the shop has discount codes off (the server ignores a code then anyway). */
 export function CouponBox({
   showAvailable = false,
 }: {
   showAvailable?: boolean;
 }) {
+  const { coupons } = useStoreFeatures();
+  return coupons ? <CouponForm showAvailable={showAvailable} /> : null;
+}
+
+function CouponForm({ showAvailable }: { showAvailable: boolean }) {
   const { coupon, applyCoupon, removeCoupon, quote, quoting } = useCart();
   const [code, setCode] = useState("");
   const [err, setErr] = useState<string | null>(null);

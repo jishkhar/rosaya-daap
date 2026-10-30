@@ -164,7 +164,9 @@ export default async function ProductPage({ params }: Props) {
               </details>
             ))}
           </div>
-          <ProductReviews key={p.slug} slug={p.slug} />
+          {(await getStorefront()).features.reviews && (
+            <ProductReviews key={p.slug} slug={p.slug} />
+          )}
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Check, MapPin, RotateCcw, ShieldCheck, Truck } from "lucide-react";
 import type { Product } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
+import { useStoreFeatures } from "@/lib/features";
 import {
   answerParts,
   useDeliverTo,
@@ -19,6 +20,7 @@ import { Button } from "@/components/ui/Button";
 
 export function PurchasePanel({ p }: { p: Product }) {
   const { add, setOpen, ready } = useCart();
+  const { cart } = useStoreFeatures();
   const shipping = useShipping();
   const router = useRouter();
   const multi = p.variants.length > 1;
@@ -159,7 +161,12 @@ export function PurchasePanel({ p }: { p: Product }) {
         </fieldset>
       )}
 
-      {inStock ? (
+      {!cart ? (
+        <p className="rounded-xl bg-sand/70 px-4 py-3 text-center text-sm text-ink-soft">
+          Online ordering isn&apos;t available at the moment. Please contact the
+          shop to order.
+        </p>
+      ) : inStock ? (
         <>
           <div className="flex items-center gap-4">
             <Qty

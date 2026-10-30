@@ -8,6 +8,7 @@ import { colorHex } from "@/lib/catalog";
 import { percentOff } from "@/lib/money";
 import { Price } from "@/components/ui/Price";
 import { useCart } from "@/lib/cart";
+import { useStoreFeatures } from "@/lib/features";
 
 export function ProductCard({
   p,
@@ -19,6 +20,7 @@ export function ProductCard({
   sizes?: string;
 }) {
   const { add, ready } = useCart();
+  const { cart } = useStoreFeatures();
   const off = percentOff(p.price, p.mrp);
   const quickAdd = () =>
     ready &&
@@ -91,7 +93,7 @@ export function ProductCard({
           </div>
         </div>
       </Link>
-      {p.inStock && !p.hasChoices && p.variantId && (
+      {cart && p.inStock && !p.hasChoices && p.variantId && (
         <button
           disabled={!ready}
           onClick={quickAdd}

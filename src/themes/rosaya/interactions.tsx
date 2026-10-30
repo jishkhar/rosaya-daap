@@ -17,6 +17,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useBrand } from "@/lib/brand";
 import { useCart } from "@/lib/cart";
+import { useStoreFeatures } from "@/lib/features";
 import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 import type { Values } from "@/themes/schema";
 import styles from "./rosaya.module.css";
@@ -86,6 +87,7 @@ export function Header({
   const { name, logo } = useBrand();
   const { user } = useAuth();
   const { count, setOpen } = useCart();
+  const features = useStoreFeatures();
   const [panel, setPanel] = useState<"Menu" | "Search" | null>(null);
   const menu = [
     ...headerMenu(collections, settings.menu_limit as number),
@@ -137,21 +139,25 @@ export function Header({
             <Search />
           </button>
         ) : null}
-        <Link
-          href={user ? "/account" : "/login"}
-          aria-label={user ? "My account" : "Log in"}
-        >
-          <UserRound />
-        </Link>
-        <button
-          type="button"
-          aria-label={`Cart, ${count} items`}
-          onClick={() => setOpen(true)}
-          className={styles.bag}
-        >
-          <ShoppingBag />
-          {count > 0 && <span>{count}</span>}
-        </button>
+        {features.accounts && (
+          <Link
+            href={user ? "/account" : "/login"}
+            aria-label={user ? "My account" : "Log in"}
+          >
+            <UserRound />
+          </Link>
+        )}
+        {features.cart && (
+          <button
+            type="button"
+            aria-label={`Cart, ${count} items`}
+            onClick={() => setOpen(true)}
+            className={styles.bag}
+          >
+            <ShoppingBag />
+            {count > 0 && <span>{count}</span>}
+          </button>
+        )}
       </div>
       {panel && (
         <Overlay title={panel} close={() => setPanel(null)}>
@@ -193,14 +199,16 @@ export function Header({
                   ))}
                 </ul>
               </nav>
-              <Link
-                href={user ? "/account" : "/login"}
-                className={styles.menuAccount}
-                onClick={() => setPanel(null)}
-              >
-                <UserRound size={20} />
-                {user ? "My account" : "Log in"}
-              </Link>
+              {features.accounts && (
+                <Link
+                  href={user ? "/account" : "/login"}
+                  className={styles.menuAccount}
+                  onClick={() => setPanel(null)}
+                >
+                  <UserRound size={20} />
+                  {user ? "My account" : "Log in"}
+                </Link>
+              )}
             </>
           ) : (
             <form
