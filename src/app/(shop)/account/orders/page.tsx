@@ -120,9 +120,10 @@ export default function OrdersPage() {
             const unpaid =
               o.payment_method === "online" &&
               o.payment_status !== "paid" &&
-              o.status === "pending";
-            // an unpaid online order, or cash on delivery before it ships
-            const canPay = o.can_pay_online ?? unpaid;
+              o.status === "pending" &&
+              !o.exchange_pending;
+            // an unpaid online order, or cash on delivery before it ships (never the replacement of an exchange: that is paid at the exchange)
+            const canPay = !o.exchange_pending && (o.can_pay_online ?? unpaid);
             return (
               <li
                 key={o.id}
@@ -149,7 +150,11 @@ export default function OrdersPage() {
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-medium ${badge[stage]}`}
                   >
-                    {unpaid ? "Awaiting payment" : stage}
+                    {unpaid
+                      ? "Awaiting payment"
+                      : o.exchange_pending
+                        ? "Awaiting your item"
+                        : stage}
                   </span>
                   <span className="font-semibold">
                     {formatINR(o.total_minor / 100)}

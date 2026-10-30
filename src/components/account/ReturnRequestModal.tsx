@@ -269,18 +269,41 @@ export function ReturnRequestModal({
                 </option>
               ))}
             </select>
-            <label htmlFor="ret-note" className="block text-sm text-ink-soft">
-              Anything the shop should know?
-              {reason === "other" ? " (required)" : " (optional)"}
-            </label>
-            <textarea
-              id="ret-note"
-              value={note}
-              maxLength={500}
-              rows={3}
-              onChange={(e) => setNote(e.target.value)}
-              className="w-full rounded-xl border border-line bg-white p-4 text-sm outline-none focus:border-ink"
-            />
+            {reason === "other" ? (
+              <>
+                <label htmlFor="ret-note" className="block text-sm font-medium">
+                  Please tell us the reason{" "}
+                  <span className="font-normal text-ink-soft">(required)</span>
+                </label>
+                <input
+                  id="ret-note"
+                  type="text"
+                  value={note}
+                  maxLength={500}
+                  required
+                  placeholder="Type your reason here"
+                  onChange={(e) => setNote(e.target.value)}
+                  className="h-12 w-full rounded-xl border border-line bg-white px-4 text-sm outline-none focus:border-ink"
+                />
+              </>
+            ) : (
+              <>
+                <label
+                  htmlFor="ret-note"
+                  className="block text-sm text-ink-soft"
+                >
+                  Anything the shop should know? (optional)
+                </label>
+                <textarea
+                  id="ret-note"
+                  value={note}
+                  maxLength={500}
+                  rows={3}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="w-full rounded-xl border border-line bg-white p-4 text-sm outline-none focus:border-ink"
+                />
+              </>
+            )}
           </section>
 
           {!exchanging && options.length > 1 && (

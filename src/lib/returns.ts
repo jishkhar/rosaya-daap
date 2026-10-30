@@ -58,6 +58,12 @@ export type CustomerReturn = {
   difference_minor: number;
   exchange_order_id: string | null;
   exchange_order_number: string | null;
+  /** An online exchange's difference, paid when the exchange is asked for: what was due, what is paid, what is left (null once handled). */
+  top_up: {
+    due_minor: number;
+    paid_minor: number;
+    outstanding_minor: number;
+  } | null;
   decision_note: string | null;
   created_at: string;
   completed_at: string | null;
@@ -89,7 +95,7 @@ export const REASONS: { value: ReasonCode; label: string }[] = [
   { value: "defective", label: "Faulty or not working" },
   { value: "wrong_item", label: "Wrong item sent" },
   { value: "changed_mind", label: "Changed my mind" },
-  { value: "other", label: "Something else" },
+  { value: "other", label: "Other" },
 ];
 
 export const PREFERENCES: Record<Preference, { label: string; hint: string }> =

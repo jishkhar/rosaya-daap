@@ -3,10 +3,12 @@
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { RotateCcw } from "lucide-react";
-import { ButtonLink } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { useRemoteList } from "@/lib/account";
 import { useAuth } from "@/lib/auth";
+import { useBrand } from "@/lib/brand";
 import { call } from "@/lib/http";
+import { payStarted, type PayStart } from "@/lib/payOrder";
 import { formatINR } from "@/lib/money";
 import {
   longDate,
@@ -28,6 +30,7 @@ const NEXT: Record<CustomerReturn["status"], string> = {
 /** The shopper's return requests from the website, newest first, with their status. */
 export default function ReturnsPage() {
   const { user } = useAuth();
+  const brand = useBrand();
   const sent = useSearchParams().get("sent") === "1";
   const { items, ready, error, reload } = useRemoteList<CustomerReturn>(
     "/api/me/returns",
@@ -43,6 +46,26 @@ export default function ReturnsPage() {
         aria-label="Loading returns"
       />
     );
+
+  // An exchange's difference that is still unpaid (the payment was not finished): the same step as when the exchange was asked for.
+  const pay = async (r: CustomerReturn) => {
+    setBusy(r.id);
+    setCancelError(null);
+    const res = await call<PayStart>(`/api/me/returns/${r.id}/pay-difference`, {
+      method: "POST",
+      body: {},
+    });
+    if (!res.ok) {
+      setBusy(null);
+      return setCancelError(res.error);
+    }
+    const problem = r.exchange_order_id
+      ? await payStarted(r.exchange_order_id, res.data, brand)
+      : null;
+    setBusy(null);
+    if (problem) setCancelError(problem);
+    await reload();
+  };
 
   const cancel = async (r: CustomerReturn) => {
     setBusy(r.id);
@@ -155,7 +178,7 @@ export default function ReturnsPage() {
                       )}
                       {r.difference_minor > 0
                         ? r.exchange_payment === "online"
-                          ? `You pay ${formatINR(r.difference_minor / 100)} more: use Pay on that order in your Orders.`
+                          ? `You paid ${formatINR(r.difference_minor / 100)} more online when you asked for the exchange.`
                           : `You pay ${formatINR(r.difference_minor / 100)} more, in cash on delivery.`
                         : r.loyalty_points > 0
                           ? `${r.loyalty_points.toLocaleString("en-IN")} loyalty points were added for the difference.`
@@ -181,6 +204,19 @@ export default function ReturnsPage() {
                   )}
                   <p>{NEXT[r.status]}</p>
                 </div>
+                {r.top_up && r.top_up.due_minor > 0 && (
+                  <p className="text-sm">
+                    <span className="text-ink">Difference:</span>{" "}
+                    {r.top_up.outstanding_minor > 0
+                      ? `${formatINR(r.top_up.outstanding_minor / 100)} still to pay online.`
+                      : `${formatINR(r.top_up.due_minor / 100)} paid.`}
+                  </p>
+                )}
+                {r.top_up && r.top_up.outstanding_minor > 0 && (
+                  <Button disabled={busy === r.id} onClick={() => pay(r)}>
+                    Pay {formatINR(r.top_up.outstanding_minor / 100)} now
+                  </Button>
+                )}
                 {r.status === "requested" && (
                   <button
                     onClick={() => cancel(r)}

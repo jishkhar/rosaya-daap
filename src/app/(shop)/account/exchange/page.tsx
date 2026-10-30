@@ -12,7 +12,9 @@ import {
   useExchangeDraft,
   type ExchangeQuote,
 } from "@/lib/exchange";
+import { useBrand } from "@/lib/brand";
 import { call } from "@/lib/http";
+import { payStarted, type PayStart } from "@/lib/payOrder";
 import { formatINR } from "@/lib/money";
 
 const money = (minor: number) => formatINR(minor / 100);
@@ -21,6 +23,7 @@ const money = (minor: number) => formatINR(minor / 100);
 export default function ExchangePage() {
   const draft = useExchangeDraft();
   const router = useRouter();
+  const brand = useBrand();
   const [result, setResult] = useState<{
     key: string;
     quote?: ExchangeQuote;
@@ -93,29 +96,46 @@ export default function ExchangePage() {
     if (!replacement) return;
     setBusy(true);
     setError(null);
-    const res = await call(
-      `/api/me/orders/${draft.orderId}/exchange-requests`,
-      {
-        method: "POST",
-        body: {
-          items: draft.items.map((i) => ({
-            order_item_id: i.order_item_id,
-            quantity: i.quantity,
-          })),
-          reason_code: draft.reason,
-          reason_note: draft.note || null,
-          replacement: [
-            {
-              variant_id: replacement.variant_id,
-              quantity: replacement.quantity,
-            },
-          ],
-        },
+    const res = await call<{
+      exchange_order_id: string | null;
+      payment: PayStart | null;
+    }>(`/api/me/orders/${draft.orderId}/exchange-requests`, {
+      method: "POST",
+      body: {
+        items: draft.items.map((i) => ({
+          order_item_id: i.order_item_id,
+          quantity: i.quantity,
+        })),
+        reason_code: draft.reason,
+        reason_note: draft.note || null,
+        replacement: [
+          {
+            variant_id: replacement.variant_id,
+            quantity: replacement.quantity,
+          },
+        ],
       },
-    );
+    });
     setBusy(false);
     if (!res.ok) return setError(res.error);
     clearDraft();
+    // a dearer exchange on a prepaid order is paid now, in Razorpay's window. A payment left unfinished is picked up on the Returns page
+    // ("Pay now"), where the request waits.
+    if (res.data.payment && res.data.exchange_order_id) {
+      setBusy(true);
+      const problem = await payStarted(
+        res.data.exchange_order_id,
+        res.data.payment,
+        brand,
+      );
+      if (problem) {
+        setBusy(false);
+        setError(
+          `${problem} Your exchange is saved: pay the difference from Returns.`,
+        );
+        return router.push("/account/returns?sent=1");
+      }
+    }
     router.push("/account/returns?sent=1");
   };
 
@@ -226,7 +246,7 @@ export default function ExchangePage() {
                 {quote.outcome === "pay" &&
                   (quote.pay_by === "cod"
                     ? `The replacement costs ${money(quote.due_minor)} more. Your order was cash on delivery, so you pay this in cash when the replacement is delivered.`
-                    : `The replacement costs ${money(quote.due_minor)} more. Once the shop receives your items, a Pay button for ${money(quote.due_minor)} appears on the replacement order in your Orders; it's sent after you pay.`)}
+                    : `The replacement costs ${money(quote.due_minor)} more. You pay this ${money(quote.due_minor)} online now, when you confirm; the value of your returned items covers the rest, and the replacement is sent once the shop receives them.`)}
                 {quote.outcome === "points" &&
                   (quote.points_possible
                     ? `The replacement costs ${money(quote.surplus_minor)} less. The difference comes back as ${quote.surplus_points.toLocaleString("en-IN")} loyalty points once the shop receives your items.`
@@ -258,7 +278,11 @@ export default function ExchangePage() {
           disabled={!replacement || !quote || blocked || busy}
           onClick={send}
         >
-          {busy ? "Sending…" : "Confirm exchange request"}
+          {busy
+            ? "Sending…"
+            : quote?.outcome === "pay" && quote.pay_by === "online"
+              ? `Pay ${money(quote.due_minor)} and confirm`
+              : "Confirm exchange request"}
         </Button>
       </div>
       <p className="text-xs text-ink-soft">

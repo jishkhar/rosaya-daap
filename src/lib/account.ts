@@ -17,6 +17,8 @@ export type OrderItem = {
 };
 export type ApiOrder = {
   can_cancel: boolean;
+  /** The return number when this is the replacement of an exchange still waiting for the returned goods (nothing is left to pay on it). */
+  exchange_pending?: string | null;
   id: string;
   order_number: string;
   status: string;
