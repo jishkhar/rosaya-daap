@@ -78,7 +78,8 @@ test("legacy ID links redirect to the title URL while preserving filters", async
       props(`collection-${id}`, { sort: "price-asc", colour: ["red", "blue"] }),
     ),
     {
-      message: "REDIRECT:/collections/sarees?sort=price-asc&colour=red&colour=blue",
+      message:
+        "REDIRECT:/collections/sarees?sort=price-asc&colour=red&colour=blue",
     },
   );
 });

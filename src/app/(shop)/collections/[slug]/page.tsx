@@ -113,7 +113,11 @@ export default async function CollectionPage({ params, searchParams }: Props) {
           ) : null}
         </div>
       </header>
-      <Listing scope={c.scope} searchParams={filters} basePath={`/collections/${slug}`} />
+      <Listing
+        scope={c.scope}
+        searchParams={filters}
+        basePath={`/collections/${slug}`}
+      />
     </div>
   );
 }

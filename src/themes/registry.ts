@@ -11,7 +11,11 @@ import {
   type StoreIdentity,
   type ThemeConfig,
 } from "@/themes/schema";
-import { ALL_FEATURES, toFeatures, type StoreFeatures } from "@/lib/featureFlags";
+import {
+  ALL_FEATURES,
+  toFeatures,
+  type StoreFeatures,
+} from "@/lib/featureFlags";
 import type { Shipping } from "@/lib/shipping";
 import type { Theme } from "@/themes/types";
 

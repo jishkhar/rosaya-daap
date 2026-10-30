@@ -21,7 +21,11 @@ const money = (minor: number) => formatINR(minor / 100);
 export default function ExchangePage() {
   const draft = useExchangeDraft();
   const router = useRouter();
-  const [quote, setQuote] = useState<ExchangeQuote | null>(null);
+  const [result, setResult] = useState<{
+    key: string;
+    quote?: ExchangeQuote;
+    error?: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -29,12 +33,14 @@ export default function ExchangePage() {
   const replacement = draft?.replacement;
   const itemsKey = JSON.stringify(draft?.items ?? []);
   const replacementKey = JSON.stringify(replacement ?? null);
+  // A quote belongs to the exact exchange it was asked for; a changed draft shows the loading state until its own quote arrives.
+  const key = `${orderId}|${itemsKey}|${replacementKey}`;
+  const quote = result?.key === key ? (result.quote ?? null) : null;
+  const quoteError = result?.key === key ? (result.error ?? null) : null;
 
   useEffect(() => {
     if (!orderId || !replacement) return;
     let live = true;
-    setQuote(null);
-    setError(null);
     void call<ExchangeQuote>(`/api/me/orders/${orderId}/exchange-quote`, {
       method: "POST",
       body: {
@@ -53,15 +59,14 @@ export default function ExchangePage() {
       },
     }).then((res) => {
       if (!live) return;
-      if (res.ok) setQuote(res.data);
-      else setError(res.error);
+      setResult(res.ok ? { key, quote: res.data } : { key, error: res.error });
     });
     return () => {
       live = false;
     };
     // the keys stand for the draft's contents
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId, itemsKey, replacementKey]);
+  }, [key]);
 
   const back = (
     <Link
@@ -179,7 +184,7 @@ export default function ExchangePage() {
 
       {replacement && (
         <section className="space-y-3 rounded-2xl border border-line bg-white p-5 text-sm">
-          {!quote && !error && (
+          {!quote && !error && !quoteError && (
             <div
               className="h-24 animate-pulse rounded-xl bg-sand"
               aria-label="Working out the difference"

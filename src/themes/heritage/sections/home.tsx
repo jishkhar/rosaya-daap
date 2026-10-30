@@ -206,7 +206,10 @@ export const occasions: SectionDef<Covers> = {
         <ul className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-5 sm:gap-5 sm:overflow-visible sm:px-0">
           {list.map((c) => (
             <li key={c.slug} className="w-36 shrink-0 sm:w-auto">
-              <Link href={`/collections/${c.slug}`} className="group block text-center">
+              <Link
+                href={`/collections/${c.slug}`}
+                className="group block text-center"
+              >
                 <div className="relative mx-auto aspect-[3/4] overflow-hidden rounded-t-[999px] bg-sand ring-1 ring-gold/40 ring-offset-4 ring-offset-cream">
                   <Image
                     src={coverOf(data, c.slug)}

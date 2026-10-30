@@ -9,7 +9,11 @@ const nextConfig: NextConfig = {
   // Old short URLs (/c/…, /p/…) keep working for bookmarks, search engines and stored theme links.
   async redirects() {
     return [
-      { source: "/c/:slug", destination: "/collections/:slug", permanent: true },
+      {
+        source: "/c/:slug",
+        destination: "/collections/:slug",
+        permanent: true,
+      },
       { source: "/p/:slug", destination: "/products/:slug", permanent: true },
     ];
   },

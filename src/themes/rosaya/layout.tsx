@@ -57,7 +57,9 @@ export function Footer({
           ]
         : []),
       ...column.links.flatMap((link) => {
-        const current = collections.find((c) => link.href === `/collections/${c.slug}`);
+        const current = collections.find(
+          (c) => link.href === `/collections/${c.slug}`,
+        );
         if (current) return [{ ...link, label: current.name }];
         return link.href.startsWith("/collections/collection-") ? [] : [link];
       }),
