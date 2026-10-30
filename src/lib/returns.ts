@@ -7,6 +7,14 @@ export type Returnable = {
   window: { days: number; closes_on: string | null; open: boolean };
   exchanges_enabled: boolean;
   store_credit_enabled: boolean;
+  loyalty_enabled: boolean;
+  /** What the shopper needs to weigh points against money: `points_per_unit` points are worth `unit_value_minor` (paise) at checkout. */
+  loyalty: {
+    member: boolean;
+    balance_points: number;
+    points_per_unit: number;
+    unit_value_minor: number;
+  };
   lines: {
     order_item_id: string;
     sku: string;
@@ -20,7 +28,8 @@ export type Returnable = {
 
 export type ReturnStatus =
   "requested" | "approved" | "rejected" | "completed" | "cancelled";
-export type Preference = "refund" | "exchange" | "store_credit";
+export type Preference =
+  "refund" | "exchange" | "store_credit" | "loyalty_points";
 
 export type CustomerReturn = {
   id: string;
@@ -35,6 +44,20 @@ export type CustomerReturn = {
   refund_mode: string | null;
   items_value_minor: number;
   refund_minor: number;
+  /** Points credited when the return went back as loyalty points (0 otherwise). */
+  loyalty_points: number;
+  /** An exchange: the replacement the shopper chose, how any difference is paid, and the replacement order once it exists. */
+  replacement: {
+    variant_id: string;
+    quantity: number;
+    name: string;
+    sku: string | null;
+    unit_price_minor: number;
+  }[];
+  exchange_payment: "cod" | "online" | null;
+  difference_minor: number;
+  exchange_order_id: string | null;
+  exchange_order_number: string | null;
   decision_note: string | null;
   created_at: string;
   completed_at: string | null;
@@ -54,6 +77,12 @@ export type ReasonCode =
   | "changed_mind"
   | "other";
 
+/** Points a refund of `valueMinor` (paise) becomes, rounded down like the shop does. */
+export const pointsFor = (r: Returnable, valueMinor: number) =>
+  Math.floor(
+    (valueMinor * r.loyalty.points_per_unit) / r.loyalty.unit_value_minor,
+  );
+
 export const REASONS: { value: ReasonCode; label: string }[] = [
   { value: "size_fit", label: "Size or fit isn't right" },
   { value: "damaged", label: "Arrived damaged" },
@@ -66,8 +95,12 @@ export const REASONS: { value: ReasonCode; label: string }[] = [
 export const PREFERENCES: Record<Preference, { label: string; hint: string }> =
   {
     refund: {
-      label: "Refund",
-      hint: "Money back once the shop receives the items.",
+      label: "Money back",
+      hint: "Refunded to you once the shop receives the items.",
+    },
+    loyalty_points: {
+      label: "Loyalty points",
+      hint: "Get the value as loyalty points to spend on your next order.",
     },
     exchange: {
       label: "Exchange",

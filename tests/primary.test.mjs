@@ -55,16 +55,16 @@ function load({
 test("other addresses of a shop go to its primary one, same path and query", async () => {
   const { primaryRedirect } = load({
     host: "rosaya.ecommerce.daaprimetech.com",
-    path: "/c/sarees?sort=new",
+    path: "/collections/sarees?sort=new",
   });
   assert.equal(
     await primaryRedirect("rosaya.in"),
-    "https://rosaya.in/c/sarees?sort=new",
+    "https://rosaya.in/collections/sarees?sort=new",
   );
-  const custom = load({ host: "old-name.in", path: "/p/silk" });
+  const custom = load({ host: "old-name.in", path: "/products/silk" });
   assert.equal(
     await custom.primaryRedirect("rosaya.ecommerce.daaprimetech.com"),
-    "https://rosaya.ecommerce.daaprimetech.com/p/silk",
+    "https://rosaya.ecommerce.daaprimetech.com/products/silk",
   );
 });
 

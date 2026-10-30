@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, Eye, EyeOff } from "lucide-react";
-import { MembershipEnrollment } from "@/components/account/MembershipEnrollment";
+import { MembershipCard } from "@/components/account/MembershipCard";
 import { useAuth } from "@/lib/auth";
 import { call } from "@/lib/http";
 import {
@@ -57,10 +57,9 @@ export default function ProfilePage() {
     setSaveError(null);
     setSaved(false);
     if (value.trim().length < 2) return setSaveError("Enter your full name.");
-    if ((isMember && !birthdayValue) || birthdayValue > maxBirthday)
+    if (!birthdayValue || birthdayValue > maxBirthday)
       return setSaveError("Enter a valid date of birth.");
-    if ((isMember || phoneValue) && mobileError(phoneValue))
-      return setSaveError(MOBILE_MESSAGE);
+    if (mobileError(phoneValue)) return setSaveError(MOBILE_MESSAGE);
     setSaving(true);
     try {
       const details = {
@@ -108,7 +107,14 @@ export default function ProfilePage() {
   return (
     <div>
       <h1 className="font-heading text-3xl font-medium">Profile</h1>
-      <MembershipEnrollment user={user} />
+      {isMember ? (
+        <MembershipCard user={user} />
+      ) : (
+        <p className="mt-6 rounded-2xl border border-line bg-white px-5 py-4 text-sm text-ink-soft">
+          Add your date of birth and mobile number below to activate your
+          membership and start earning loyalty points.
+        </p>
+      )}
 
       <div className="mt-6">
         <div className="grid min-w-0 items-start gap-6 xl:grid-cols-2">
@@ -151,7 +157,7 @@ export default function ProfilePage() {
                 id="p-birthday"
                 type="date"
                 autoComplete="bday"
-                required={isMember}
+                required
                 max={maxBirthday}
                 value={birthdayValue}
                 disabled={saving}
@@ -195,7 +201,7 @@ export default function ProfilePage() {
                 </span>
                 <input
                   id="p-phone"
-                  required={isMember}
+                  required
                   inputMode="numeric"
                   maxLength={10}
                   autoComplete="tel-national"

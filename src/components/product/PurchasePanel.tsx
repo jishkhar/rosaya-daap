@@ -17,6 +17,7 @@ import { daysText } from "@/lib/shipping";
 import { useShipping } from "@/lib/shippingContext";
 import { Qty } from "@/components/cart/CartDrawer";
 import { Button } from "@/components/ui/Button";
+import { saveDraft, useExchangeDraft } from "@/lib/exchange";
 
 export function PurchasePanel({ p }: { p: Product }) {
   const { add, setOpen, ready } = useCart();
@@ -44,6 +45,25 @@ export function PurchasePanel({ p }: { p: Product }) {
     v.size ??
     ([v.name, v.colour].filter((x) => x && x !== "Default").join(" · ") ||
       "Standard");
+
+  // An exchange in progress: this page picks the replacement instead of filling the bag.
+  const draft = useExchangeDraft();
+  const chooseReplacement = () => {
+    if (!draft) return;
+    if (!vid) return setNeedSize(true);
+    saveDraft({
+      ...draft,
+      replacement: {
+        variant_id: vid,
+        quantity: Math.min(qty, maxQty),
+        title: p.title,
+        size: variant?.size,
+        image: p.images[0],
+        price: variant?.price ?? p.price,
+      },
+    });
+    router.push("/account/exchange");
+  };
 
   const submit = (buyNow = false) => {
     if (!ready) return;
@@ -161,7 +181,23 @@ export function PurchasePanel({ p }: { p: Product }) {
         </fieldset>
       )}
 
-      {!cart ? (
+      {inStock && draft ? (
+        <>
+          <div className="flex items-center gap-4">
+            <Qty
+              qty={qty}
+              onChange={(q) => setQty(Math.max(1, Math.min(maxQty, q)))}
+            />
+            <Button size="lg" className="flex-1" onClick={chooseReplacement}>
+              Choose as replacement
+            </Button>
+          </div>
+          <p className="mt-2 text-sm text-ink-soft">
+            Exchanging for order #{draft.orderNumber}. You&apos;ll see the
+            difference before you confirm.
+          </p>
+        </>
+      ) : !cart ? (
         <p className="rounded-xl bg-sand/70 px-4 py-3 text-center text-sm text-ink-soft">
           Online ordering isn&apos;t available at the moment. Please contact the
           shop to order.

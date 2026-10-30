@@ -15,7 +15,7 @@ const collection = {
 };
 function fixture() {
   const filename = fileURLToPath(
-    new URL("../src/app/(shop)/c/[slug]/page.tsx", import.meta.url),
+    new URL("../src/app/(shop)/collections/[slug]/page.tsx", import.meta.url),
   );
   const unit = new Module(filename);
   unit.paths = Module._nodeModulePaths(path.dirname(filename));
@@ -67,7 +67,7 @@ test("title URLs render the collection and filter products using its internal ID
     (child) => child?.type === "Listing",
   );
   assert.deepEqual(listing.props.scope, { collectionId: id });
-  assert.equal(listing.props.basePath, "/c/sarees");
+  assert.equal(listing.props.basePath, "/collections/sarees");
   assert.deepEqual(listing.props.searchParams, { sort: "price-asc" });
 });
 
@@ -78,7 +78,7 @@ test("legacy ID links redirect to the title URL while preserving filters", async
       props(`collection-${id}`, { sort: "price-asc", colour: ["red", "blue"] }),
     ),
     {
-      message: "REDIRECT:/c/sarees?sort=price-asc&colour=red&colour=blue",
+      message: "REDIRECT:/collections/sarees?sort=price-asc&colour=red&colour=blue",
     },
   );
 });

@@ -1,14 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Minus, Plus } from "lucide-react";
+import { Minus, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { call } from "@/lib/http";
+import { saveDraft } from "@/lib/exchange";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 import { formatINR } from "@/lib/money";
 import {
   longDate,
+  pointsFor,
   PREFERENCES,
   REASONS,
   type Preference,
@@ -16,10 +18,20 @@ import {
   type Returnable,
 } from "@/lib/returns";
 
-/** Ask the shop to take items of a delivered order back. Nothing is refunded until the shop receives them. */
-export default function ReturnRequestPage() {
-  const { id } = useParams<{ id: string }>();
+/** A dialog on the orders page. `return`: ask the shop to take items back, repaid as money or loyalty points. `exchange`: say what goes back, then
+ * the shopper is sent to the shop to choose the replacement and confirms on /account/exchange. Nothing moves until the shop receives the goods. */
+export function ReturnRequestModal({
+  orderId: id,
+  mode = "return",
+  onClose,
+}: {
+  orderId: string;
+  mode?: "return" | "exchange";
+  onClose: () => void;
+}) {
+  const exchanging = mode === "exchange";
   const router = useRouter();
+  useBodyScrollLock(true);
   const [r, setR] = useState<Returnable | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [qty, setQty] = useState<Record<string, number>>({});
@@ -41,32 +53,67 @@ export default function ReturnRequestPage() {
     };
   }, [id]);
 
-  const back = (
-    <Link
-      href="/account/orders"
-      className="inline-flex items-center gap-1 text-sm text-ink-soft hover:text-ink"
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const frame = (children: React.ReactNode) => (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ret-title"
     >
-      <ArrowLeft className="h-4 w-4" /> Back to orders
-    </Link>
-  );
-  if (loadError)
-    return (
-      <div className="space-y-4">
-        {back}
-        <p
-          role="alert"
-          className="rounded-xl bg-danger/10 p-3 text-sm text-danger"
-        >
-          {loadError}
-        </p>
+      <button
+        aria-label="Close"
+        className="absolute inset-0 bg-ink/50"
+        onClick={onClose}
+      />
+      <div className="relative flex max-h-[92vh] w-full max-w-2xl flex-col rounded-t-3xl bg-cream shadow-2xl sm:rounded-3xl">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-6 py-5">
+          <div>
+            <h1 id="ret-title" className="font-heading text-2xl font-medium">
+              {exchanging ? "Exchange items" : "Return items"}
+            </h1>
+            {r && (
+              <p className="mt-1 text-sm text-ink-soft">
+                Order #{r.order_number}
+                {r.window.closes_on && r.window.open
+                  ? ` · returns accepted until ${longDate(r.window.closes_on)}`
+                  : ""}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="touch-target rounded-full p-2 hover:bg-sand"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="overflow-y-auto px-6 py-5">{children}</div>
       </div>
+    </div>
+  );
+
+  if (loadError)
+    return frame(
+      <p
+        role="alert"
+        className="rounded-xl bg-danger/10 p-3 text-sm text-danger"
+      >
+        {loadError}
+      </p>,
     );
   if (!r)
-    return (
+    return frame(
       <div
-        className="h-64 animate-pulse rounded-2xl bg-sand"
+        className="h-48 animate-pulse rounded-2xl bg-sand"
         aria-label="Loading"
-      />
+      />,
     );
 
   const lines = r.lines.filter((l) => l.returnable_quantity > 0);
@@ -75,12 +122,16 @@ export default function ReturnRequestPage() {
     (s, l) => s + l.unit_refund_minor * qty[l.order_item_id],
     0,
   );
-  const options = (Object.keys(PREFERENCES) as Preference[]).filter(
+  // Money back or loyalty points. (Exchanges have their own flow; store credit stays a counter option for staff.)
+  const options = (["refund", "loyalty_points"] as Preference[]).filter(
     (p) =>
       p === "refund" ||
-      (p === "exchange" && r.exchanges_enabled) ||
-      (p === "store_credit" && r.store_credit_enabled),
+      (p === "loyalty_points" && r.loyalty_enabled && r.loyalty.member),
   );
+  const pointsHint = (p: Preference) =>
+    p === "loyalty_points" && value > 0
+      ? `You'd get about ${pointsFor(r, value).toLocaleString("en-IN")} points (worth ${formatINR(value / 100)}).`
+      : PREFERENCES[p].hint;
   const canSend =
     r.window.open &&
     chosen.length > 0 &&
@@ -88,6 +139,24 @@ export default function ReturnRequestPage() {
     (reason !== "other" || !!note.trim());
 
   const submit = async () => {
+    if (exchanging) {
+      saveDraft({
+        orderId: id,
+        orderNumber: r.order_number,
+        items: chosen.map((l) => ({
+          order_item_id: l.order_item_id,
+          quantity: qty[l.order_item_id],
+          name: l.name,
+          unit_refund_minor: l.unit_refund_minor,
+        })),
+        reason: reason as ReasonCode,
+        note: note.trim(),
+        replacement: null,
+      });
+      onClose();
+      router.push("/shop");
+      return;
+    }
     setBusy(true);
     setError(null);
     const res = await call(`/api/me/orders/${id}/return-requests`, {
@@ -104,6 +173,7 @@ export default function ReturnRequestPage() {
     });
     setBusy(false);
     if (!res.ok) return setError(res.error);
+    onClose();
     router.push("/account/returns?sent=1");
   };
 
@@ -113,19 +183,8 @@ export default function ReturnRequestPage() {
       [itemId]: Math.min(max, Math.max(0, (q[itemId] ?? 0) + by)),
     }));
 
-  return (
+  return frame(
     <div className="space-y-6">
-      {back}
-      <div>
-        <h1 className="font-heading text-3xl font-medium">Return items</h1>
-        <p className="mt-1 text-sm text-ink-soft">
-          Order #{r.order_number}
-          {r.window.closes_on && r.window.open
-            ? ` · returns accepted until ${longDate(r.window.closes_on)}`
-            : ""}
-        </p>
-      </div>
-
       {!r.window.open || lines.length === 0 ? (
         <p className="rounded-xl bg-sand p-4 text-sm">
           {lines.length === 0
@@ -224,10 +283,10 @@ export default function ReturnRequestPage() {
             />
           </section>
 
-          {options.length > 1 && (
+          {!exchanging && options.length > 1 && (
             <fieldset className="space-y-2">
               <legend className="mb-2 font-medium">
-                What would you like instead?
+                How would you like to be repaid?
               </legend>
               {options.map((p) => (
                 <label
@@ -246,7 +305,7 @@ export default function ReturnRequestPage() {
                       {PREFERENCES[p].label}
                     </span>
                     <span className="text-xs text-ink-soft">
-                      {PREFERENCES[p].hint}
+                      {pointsHint(p)}
                     </span>
                   </span>
                 </label>
@@ -270,18 +329,25 @@ export default function ReturnRequestPage() {
                   <span className="font-semibold text-ink">
                     {formatINR(value / 100)}
                   </span>
-                  . The shop confirms the final amount once it receives them.
+                  .{" "}
+                  {exchanging
+                    ? "Next, choose the product you want instead."
+                    : "The shop confirms the final amount once it receives them."}
                 </>
               ) : (
                 "Choose at least one item."
               )}
             </p>
             <Button size="lg" disabled={!canSend || busy} onClick={submit}>
-              {busy ? "Sending…" : "Send return request"}
+              {exchanging
+                ? "Choose replacement"
+                : busy
+                  ? "Sending…"
+                  : "Send request"}
             </Button>
           </div>
         </>
       )}
-    </div>
+    </div>,
   );
 }

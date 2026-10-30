@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? {
         title: p.title,
         description: descriptionText(p.desc).slice(0, 155),
-        alternates: { canonical: `/p/${p.slug}` },
+        alternates: { canonical: `/products/${p.slug}` },
         openGraph: { images: [p.images[0]] },
       }
     : {};
@@ -67,7 +67,7 @@ export default async function ProductPage({ params }: Props) {
       availability: p.inStock
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
-      url: `${base}/p/${p.slug}`,
+      url: `${base}/products/${p.slug}`,
     },
   };
 
@@ -84,7 +84,7 @@ export default async function ProductPage({ params }: Props) {
           trail={[
             { label: "Home", href: "/" },
             ...(p.categorySlug
-              ? [{ label: p.category, href: `/c/${p.categorySlug}` }]
+              ? [{ label: p.category, href: `/collections/${p.categorySlug}` }]
               : []),
             {
               label: p.title.length > 40 ? p.title.slice(0, 40) + "…" : p.title,

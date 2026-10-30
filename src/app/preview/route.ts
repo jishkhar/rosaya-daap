@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { LIVE_PREVIEW_COOKIE, PREVIEW_COOKIE } from "@/themes/preview";
 
 /**
- * Theme preview from the portal editor: /preview?token=<signed token>[&path=/c/sarees] starts it, /preview?exit=1 ends it.
+ * Theme preview from the portal editor: /preview?token=<signed token>[&path=/collections/sarees] starts it, /preview?exit=1 ends it.
  * /preview?live=1 opens the portal's live card with fresh published settings and clears any draft token.
  * The token is only stored here; the store API checks it (signature, expiry, this tenant) on every page, so a bad one shows the live site.
  */

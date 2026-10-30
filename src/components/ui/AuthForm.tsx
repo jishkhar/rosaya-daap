@@ -23,6 +23,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [birthday, setBirthday] = useState("");
   const [show, setShow] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -37,12 +39,19 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const dest =
     next && next.startsWith("/") && !next.startsWith("//") ? next : "/account";
 
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const err: Record<string, string> = {};
     if (register && name.trim().length < 2) err.name = "Enter your full name.";
     if (!/^\S+@\S+\.\S+$/.test(email))
       err.email = "Enter a valid email address.";
+    if (register && !/^[6-9]\d{9}$/.test(phone))
+      err.phone = "Enter a valid 10-digit mobile number.";
+    if (register && (!birthday || birthday > today))
+      err.birthday = "Enter your date of birth.";
     if (password.length < (register ? 8 : 1))
       err.password = register
         ? "Use at least 8 characters."
@@ -52,7 +61,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     if (Object.keys(err).length) return;
     setBusy(true);
     const r = register
-      ? await signUp({ name: name.trim(), email: email.trim(), password })
+      ? await signUp({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          phone,
+          birthday,
+        })
       : await login(email.trim(), password);
     setBusy(false);
     if (r.ok) router.push(dest);
@@ -66,7 +81,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       </h1>
       <p className="mt-2 text-center text-ink-soft">
         {register
-          ? "Save addresses, track orders and check out faster."
+          ? "Join as a member to earn loyalty points, save addresses and check out faster."
           : "Log in with your email to track orders and save addresses."}
       </p>
 
@@ -113,6 +128,51 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           />
           <Err errors={errors} k="email" />
         </div>
+        {register && (
+          <>
+            <div>
+              <label
+                htmlFor="phone"
+                className="mb-1.5 block text-sm font-medium"
+              >
+                Mobile number
+              </label>
+              <div className="flex gap-2">
+                <span className="flex h-12 items-center rounded-xl border border-line bg-sand px-4 text-sm">
+                  +91
+                </span>
+                <input
+                  id="phone"
+                  inputMode="numeric"
+                  maxLength={10}
+                  autoComplete="tel-national"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                  className={input}
+                />
+              </div>
+              <Err errors={errors} k="phone" />
+            </div>
+            <div>
+              <label
+                htmlFor="birthday"
+                className="mb-1.5 block text-sm font-medium"
+              >
+                Date of birth
+              </label>
+              <input
+                id="birthday"
+                type="date"
+                autoComplete="bday"
+                max={today}
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
+                className={input}
+              />
+              <Err errors={errors} k="birthday" />
+            </div>
+          </>
+        )}
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <label htmlFor="password" className="text-sm font-medium">

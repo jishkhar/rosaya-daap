@@ -82,7 +82,7 @@ export function CartDrawer() {
               <p className="text-sm text-ink-soft">{feeText(shipping)}.</p>
             )}
             <ButtonLink
-              href="/c/new-arrivals"
+              href="/collections/new-arrivals"
               size="lg"
               className="mt-2"
               onClick={close}
@@ -99,7 +99,7 @@ export function CartDrawer() {
               {items.map((i) => (
                 <li key={i.key} className="flex gap-4 py-4">
                   <Link
-                    href={`/p/${i.slug}`}
+                    href={`/products/${i.slug}`}
                     onClick={close}
                     className="shrink-0"
                   >
@@ -113,7 +113,7 @@ export function CartDrawer() {
                   </Link>
                   <div className="flex min-w-0 flex-1 flex-col">
                     <Link
-                      href={`/p/${i.slug}`}
+                      href={`/products/${i.slug}`}
                       onClick={close}
                       className="line-clamp-2 text-sm hover:underline"
                     >

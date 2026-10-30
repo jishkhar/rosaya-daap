@@ -241,7 +241,7 @@ export const getPolicies = cache((): Promise<Policies> =>
   api<Policies>("/policies", { revalidate: 60 }).catch(() => NO_POLICIES),
 );
 
-/** A storefront collection page (/c/<slug>): one of the shop's categories, or a craft / occasion value found on its products. */
+/** A storefront collection page (/collections/<slug>): one of the shop's categories, or a craft / occasion value found on its products. */
 export type Collection = {
   slug: string;
   name: string;

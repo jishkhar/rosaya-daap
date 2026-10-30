@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { addFirstProductToBag, unique } from "./helpers";
+import { addFirstProductToBag, unique, uniquePhone } from "./helpers";
 
 test("register, save an address, pay online, see the order, reorder, sign out and back in", async ({
   page,
@@ -14,6 +14,8 @@ test("register, save an address, pay online, see the order, reorder, sign out an
   await page.goto("/register");
   await page.getByLabel("Full name").fill("Asha Rao");
   await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Mobile number").fill(uniquePhone());
+  await page.getByLabel("Date of birth").fill("1990-03-14");
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/account$/);
@@ -110,6 +112,8 @@ test("a duplicate email is refused and the password can be changed", async ({
   await page.goto("/register");
   await page.getByLabel("Full name").fill("Dup Licate");
   await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Mobile number").fill(uniquePhone());
+  await page.getByLabel("Date of birth").fill("1990-03-14");
   await page.getByLabel("Password", { exact: true }).fill("password one 1");
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/account$/);
@@ -127,6 +131,8 @@ test("a duplicate email is refused and the password can be changed", async ({
   await page.goto("/register");
   await page.getByLabel("Full name").fill("Someone Else");
   await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Mobile number").fill(uniquePhone());
+  await page.getByLabel("Date of birth").fill("1990-03-14");
   await page.getByLabel("Password", { exact: true }).fill("whatever pass 3");
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.locator("#main [role=alert]")).toContainText(

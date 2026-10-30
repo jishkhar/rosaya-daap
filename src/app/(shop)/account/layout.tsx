@@ -75,11 +75,14 @@ export default function AccountLayout({
       />
     );
 
-  // The deepest tab the address is under (/account/orders/<id>/return belongs to Orders).
+  // The deepest tab the address is under (Orders owns any deeper address).
+  const tabPath = pathname.startsWith("/account/exchange")
+    ? "/account/orders"
+    : pathname;
   const here =
     [...TABS]
       .reverse()
-      .find((t) => pathname === t.href || pathname.startsWith(`${t.href}/`)) ??
+      .find((t) => tabPath === t.href || tabPath.startsWith(`${t.href}/`)) ??
     TABS[0];
 
   return (

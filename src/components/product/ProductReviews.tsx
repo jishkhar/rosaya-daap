@@ -285,7 +285,7 @@ export function ProductReviews({ slug }: { slug: string }) {
             <p className="mt-4 text-sm">
               <Link
                 className="underline"
-                href={`/login?next=${encodeURIComponent(`/p/${slug}`)}`}
+                href={`/login?next=${encodeURIComponent(`/products/${slug}`)}`}
               >
                 Sign in
               </Link>{" "}

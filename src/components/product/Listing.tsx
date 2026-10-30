@@ -74,7 +74,7 @@ export async function Listing({
               ready to ship today.
             </p>
             <Link
-              href="/c/new-arrivals"
+              href="/collections/new-arrivals"
               className="mt-6 inline-flex h-11 items-center rounded-full bg-ink px-6 text-sm font-medium text-cream"
             >
               Shop new arrivals

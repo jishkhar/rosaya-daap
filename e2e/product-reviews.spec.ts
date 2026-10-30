@@ -16,7 +16,7 @@ const empty = {
 };
 
 async function openProduct(page: Page) {
-  await page.goto("/c/sarees", { waitUntil: "domcontentloaded" });
+  await page.goto("/collections/sarees", { waitUntil: "domcontentloaded" });
   const card = page.locator("#main article").first();
   await expect(card).toBeVisible();
   await card.locator("a").first().click();

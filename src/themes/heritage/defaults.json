@@ -18,7 +18,7 @@
           "title": "Shop",
           "store_collections": false,
           "links": [
-            { "label": "New Arrivals", "href": "/c/new-arrivals" },
+            { "label": "New Arrivals", "href": "/collections/new-arrivals" },
             { "label": "All products", "href": "/shop" }
           ]
         },
@@ -69,7 +69,7 @@
               "cta_label": "Shop now",
               "cta_href": "/shop",
               "cta2_label": "New Arrivals",
-              "cta2_href": "/c/new-arrivals",
+              "cta2_href": "/collections/new-arrivals",
               "collection": ""
             }
           ],
@@ -93,7 +93,7 @@
           "source": "new",
           "eyebrow": "Just in",
           "title": "New Arrivals",
-          "href": "/c/new-arrivals",
+          "href": "/collections/new-arrivals",
           "link_label": "View all"
         }
       },

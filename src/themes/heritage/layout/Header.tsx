@@ -220,7 +220,7 @@ function CollectionNavItem({
   if (!collection.header_dropdown || !children.length) {
     return (
       <Link
-        href={`/c/${collection.slug}`}
+        href={`/collections/${collection.slug}`}
         onClick={onNavigate}
         className={linkClass}
       >
@@ -304,7 +304,7 @@ function CollectionNavItem({
           {children.map((child) => (
             <li key={child.id}>
               <Link
-                href={`/c/${child.slug}`}
+                href={`/collections/${child.slug}`}
                 onClick={navigate}
                 className="block rounded-lg px-3 py-2.5 text-lg text-ink-soft hover:bg-sand hover:text-ink"
               >

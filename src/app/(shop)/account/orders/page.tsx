@@ -18,7 +18,8 @@ import { call, goTo } from "@/lib/http";
 import { formatINR } from "@/lib/money";
 import { longDate, type Returnable } from "@/lib/returns";
 import { CancelOrder } from "@/components/account/CancelOrder";
-import { ButtonLink } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
+import { ReturnRequestModal } from "@/components/account/ReturnRequestModal";
 
 const badge: Record<OrderStage, string> = {
   Placed: "bg-sand text-ink",
@@ -161,9 +162,12 @@ export default function OrdersPage() {
                   />
                 </button>
 
-                {stage === "Delivered" && (
+                {(stage === "Delivered" || stage === "Shipped") && (
                   <div className="border-t border-line p-4">
-                    <OrderReturns orderId={o.id} />
+                    <OrderReturns
+                      orderId={o.id}
+                      delivered={stage === "Delivered"}
+                    />
                   </div>
                 )}
                 {o.can_cancel && (
@@ -222,7 +226,7 @@ export default function OrdersPage() {
                           key={i.variant_id}
                           className="flex items-center gap-4 py-3"
                         >
-                          <Link href={i.slug ? `/p/${i.slug}` : "#"}>
+                          <Link href={i.slug ? `/products/${i.slug}` : "#"}>
                             <Image
                               src={i.image ?? "/placeholder.svg"}
                               alt=""
@@ -232,7 +236,7 @@ export default function OrdersPage() {
                             />
                           </Link>
                           <Link
-                            href={i.slug ? `/p/${i.slug}` : "#"}
+                            href={i.slug ? `/products/${i.slug}` : "#"}
                             className="line-clamp-2 flex-1 text-sm hover:underline"
                           >
                             {i.title}
@@ -351,9 +355,17 @@ export default function OrdersPage() {
 }
 
 /** A delivered order's return window, and the way in to a return request while it is open. */
-function OrderReturns({ orderId }: { orderId: string }) {
+function OrderReturns({
+  orderId,
+  delivered,
+}: {
+  orderId: string;
+  delivered: boolean;
+}) {
   const [r, setR] = useState<Returnable | null>(null);
+  const [asking, setAsking] = useState<"return" | "exchange" | null>(null);
   useEffect(() => {
+    if (!delivered) return;
     let live = true;
     void call<Returnable>(`/api/me/orders/${orderId}/returnable`).then(
       (res) => live && res.ok && setR(res.data),
@@ -361,7 +373,21 @@ function OrderReturns({ orderId }: { orderId: string }) {
     return () => {
       live = false;
     };
-  }, [orderId]);
+  }, [orderId, delivered]);
+  if (!delivered)
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-sand/60 px-4 py-3 text-sm">
+        <p className="text-ink-soft">
+          Returns and exchanges open once your order is delivered.
+        </p>
+        <span
+          aria-disabled="true"
+          className="cursor-not-allowed rounded-full border border-line px-5 py-2 text-sm font-medium text-ink-soft opacity-60"
+        >
+          Return or exchange
+        </span>
+      </div>
+    );
   if (!r) return null;
   const left = r.lines.some((l) => l.returnable_quantity > 0);
   const { open, closes_on, days } = r.window;
@@ -379,9 +405,21 @@ function OrderReturns({ orderId }: { orderId: string }) {
                 : "Returns open once the order is delivered."}
       </p>
       {open && left && (
-        <ButtonLink href={`/account/orders/${orderId}/return`}>
-          Return items
-        </ButtonLink>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setAsking("return")}>Return</Button>
+          {r.exchanges_enabled && (
+            <Button variant="outline" onClick={() => setAsking("exchange")}>
+              Exchange
+            </Button>
+          )}
+        </div>
+      )}
+      {asking && (
+        <ReturnRequestModal
+          orderId={orderId}
+          mode={asking}
+          onClose={() => setAsking(null)}
+        />
       )}
     </div>
   );

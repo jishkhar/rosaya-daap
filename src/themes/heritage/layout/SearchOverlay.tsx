@@ -136,7 +136,7 @@ export function SearchOverlay({
                   {live.collections.map((c) => (
                     <Link
                       key={c.slug}
-                      href={`/c/${c.slug}`}
+                      href={`/collections/${c.slug}`}
                       onClick={onClose}
                       className="rounded-full bg-sand px-4 py-1.5 text-sm hover:bg-taupe/40"
                     >
@@ -149,7 +149,7 @@ export function SearchOverlay({
                 {live.products.map((p) => (
                   <li key={p.slug}>
                     <Link
-                      href={`/p/${p.slug}`}
+                      href={`/products/${p.slug}`}
                       onClick={onClose}
                       className="flex items-center gap-4 py-3 hover:bg-sand/60"
                     >
