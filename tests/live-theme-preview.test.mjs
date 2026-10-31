@@ -44,7 +44,7 @@ function registry(cookies) {
       resolveConfig: (_, value) => value,
       withIdentity: (value) => value,
     },
-    "@/lib/features": {
+    "@/lib/store-features": {
       ALL_FEATURES: { cart: true },
       toFeatures: (options) => ({ cart: options["online.cart_checkout"] }),
     },
