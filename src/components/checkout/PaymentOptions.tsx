@@ -64,7 +64,7 @@ export function PaymentOptions({
           o.wallet && {
             way: "wallet",
             title: "Wallets",
-            note: "Paytm, PhonePe, Amazon Pay and more",
+            note: "Mobile wallets such as Mobikwik or Airtel Money",
             icon: <Wallet className="h-5 w-5" />,
           },
           o.emi && {
